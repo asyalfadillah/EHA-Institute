@@ -751,11 +751,7 @@ a:hover .cover .cover__in { transform: scale(1.05); }
 .about__logo { background: var(--green-deep); display: grid; place-items: center; padding: 14%; }
 .about__logo img { width: 100%; height: auto; }
 
-/* hero scroll cue */
-.hero:not(.hero--page)::after { content: "Scroll"; position: absolute; right: var(--pad); bottom: clamp(24px, 3vw, 56px); font-size: var(--fs-sm); font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; writing-mode: vertical-rl; padding-bottom: 64px; background: linear-gradient(#fff, #fff) 50% 100% / 1px 48px no-repeat; animation: cue 2.2s var(--ease) infinite; }
-@keyframes cue { 0%, 100% { background-size: 1px 12px; } 50% { background-size: 1px 48px; } }
-@media (max-width: 899px) { .hero:not(.hero--page)::after { display: none; } .label::after { display: none; } }
-
+@media (max-width: 899px) { .label::after { display: none; } }
 
 /* ---------- Back to top ---------- */
 .to-top { position: fixed; right: clamp(14px, 2vw, 32px); bottom: clamp(14px, 2vw, 32px); z-index: 40; width: 52px; height: 52px; border-radius: 50%; border: 0; background: #fff; color: var(--green-deep); box-shadow: 0 8px 28px rgba(8, 36, 24, 0.35), 0 0 0 1px rgba(15, 61, 42, 0.12); display: grid; place-items: center; cursor: pointer; opacity: 0; transform: translateY(16px) scale(0.9); pointer-events: none; transition: opacity 0.3s, transform 0.4s var(--ease), background 0.25s, color 0.25s; }
@@ -1139,3 +1135,53 @@ main > .section { border-radius: var(--r-sec) var(--r-sec) 0 0; margin-top: calc
 .facts { border-radius: var(--r-lg); background: radial-gradient(90% 60% at 100% 0%, rgba(255, 255, 255, 0.1), transparent 70%), linear-gradient(180deg, #2b8156, #1f6342); box-shadow: 0 30px 60px -36px rgba(6, 28, 19, 0.6); }
 .facts div { border-top: 1px solid rgba(255, 255, 255, 0.18); }
 .facts dd { font-weight: 600; }
+
+
+/* ---------- Phones: tighter type and spacing so everything fits comfortably ---------- */
+@media (max-width: 640px) {
+  :root { --pad: 18px; --r-sec: 22px; --fs-hero: 27px; --fs-xl: 22px; --fs-lg: 20px; --fs-md: 17px; --fs-body: 15px; --fs-sm: 13.5px; --gap-label: 20px; }
+  .section { padding-block: 40px; padding-bottom: calc(40px + var(--r-sec)); }
+  main > .section { padding-top: calc(40px + var(--r-sec) * 0.3); }
+  .hero { min-height: max(86svh, 520px); }
+  .hero__inner { padding-bottom: 56px; }
+  .hero h1 { line-height: 1.15; max-width: 14em; }
+  .hero--page { min-height: 300px; }
+  .hero--page h1 { font-size: clamp(30px, 9vw, 40px); }
+  .hero--article h1 { font-size: 22px; }
+  .hero--page .hero__inner { padding-top: 120px; }
+  .story { margin-top: 22px; font-size: 15px; gap: 14px; }
+  .story__disc { width: 60px; height: 60px; }
+  .label { font-size: 11.5px; }
+  .label::before { width: 2.6em; height: 2.6em; margin-right: 0.9em; }
+  .statement { font-size: 24px; line-height: 1.18; }
+  .statement--sm { font-size: 20px; }
+  .lead h3 { font-size: 21px; }
+  .card h3, .newsgrid .card h3 { font-size: 16.5px; }
+  .brief h3, .event h3, .about h3, .resources h3 { font-size: 21px; }
+  .card > a, .lead > a { padding: 8px 8px 16px; border-radius: 22px; }
+  .media, .cover, .collage span, .lead .media, .brief .media, .event .media { border-radius: 16px; }
+  .btn { min-height: 48px; font-size: 14.5px; padding-left: 20px; }
+  .btn svg { width: 36px; height: 36px; padding: 11px 10px 11px 13px; }
+  .arrow-btn { width: 44px; height: 44px; }
+  .view-all { padding: 0.65em 1.2em; font-size: 13.5px; }
+  .tile { aspect-ratio: 4 / 3.1; border-radius: 22px; }
+  .tile h3 { font-size: 24px; }
+  .tile__bg::after { font-size: 56px; }
+  .tile__go { width: 38px; height: 38px; }
+  .stat { padding: 16px; }
+  .stat b { font-size: 36px; }
+  .stat span { font-size: 11px; }
+  .person__photo { aspect-ratio: 4 / 3.4; }
+  .row, .value, .pillar, .partner { padding: 20px; border-radius: 22px; }
+  .row__t { font-size: 20px; }
+  .cta { padding: 26px 22px; border-radius: 26px; }
+  .collage { max-width: 420px; margin-inline: auto; }
+  .footer { padding-top: calc(48px + var(--r-sec)); }
+  .footer h2 { font-size: 24px; }
+  .socials a { width: 46px; height: 46px; }
+  .meta { font-size: 13px; }
+  .event { grid-template-columns: 1fr; gap: 14px; }
+  .event__date { display: none; }
+  .marquee li { font-size: 14px; }
+  .footer__base { flex-wrap: wrap; gap: 12px; font-size: 12.5px; }
+}
