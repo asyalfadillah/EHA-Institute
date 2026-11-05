@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin | EHA Institute</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="preload" href="assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<div id="boot" class="boot">Memuat…</div>
+
+<main id="auth" class="auth" hidden>
+  <form class="auth__card" id="auth-form" novalidate>
+    <img src="assets/logo.png" alt="EHA Institute" width="900" height="233">
+    <h1>Masuk ke panel admin</h1>
+    <p class="muted" id="auth-sub">Kelola berita, event, tim, mitra, dan informasi situs.</p>
+    <label for="a-email">Email</label>
+    <input id="a-email" type="email" autocomplete="email" required>
+    <label for="a-pass">Kata sandi</label>
+    <input id="a-pass" type="password" autocomplete="current-password" minlength="8" required>
+    <button class="btn btn--primary" type="submit" id="auth-go">Masuk</button>
+    <p class="note" id="auth-note" role="status"></p>
+    <button class="link" type="button" id="auth-toggle">Belum punya akun? Daftar</button>
+    <a class="link" href="index.html">← Kembali ke situs</a>
+  </form>
+</main>
+
+<main id="claim" class="auth" hidden>
+  <div class="auth__card">
+    <img src="assets/logo.png" alt="EHA Institute" width="900" height="233">
+    <h1 id="claim-title">Akun ini belum menjadi admin</h1>
+    <p class="muted" id="claim-text"></p>
+    <button class="btn btn--primary" id="claim-go" hidden>Jadikan saya admin pertama</button>
+    <p class="note" id="claim-note" role="status"></p>
+    <button class="link" id="claim-out">Keluar</button>
+  </div>
+</main>
+
+<div id="app" class="app" hidden>
+  <aside class="side">
+    <a class="side__brand" href="index.html" title="Buka situs"><img src="assets/logo.png" alt="EHA Institute" width="900" height="233"></a>
+    <nav id="tabs" aria-label="Bagian admin"></nav>
+    <div class="side__foot">
+      <span id="who" class="muted"></span>
+      <a class="link" href="index.html" target="_blank" rel="noopener">Lihat situs ↗</a>
+      <button class="link" id="out">Keluar</button>
+    </div>
+  </aside>
+  <section class="main">
+    <header class="main__head">
+      <div><h1 id="title"></h1><p class="muted" id="hint"></p></div>
+      <div class="main__tools"><input id="filter" type="search" placeholder="Cari…" aria-label="Cari"><button class="btn btn--primary" id="new">+ Tambah</button></div>
+    </header>
+    <div id="list" class="list"></div>
+  </section>
+</div>
+
+<dialog id="editor" class="editor">
+  <form id="form" method="dialog" novalidate>
+    <header><h2 id="editor-title"></h2><button type="button" class="x" id="editor-x" aria-label="Tutup">×</button></header>
+    <div id="fields" class="fields"></div>
+    <footer>
+      <button type="button" class="btn btn--danger" id="del" hidden>Hapus</button>
+      <span class="grow"></span>
+      <button type="button" class="btn" id="cancel">Batal</button>
+      <button type="submit" class="btn btn--primary" id="save">Simpan</button>
+    </footer>
+  </form>
+</dialog>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
