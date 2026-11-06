@@ -52,7 +52,7 @@
         F.sel('lang', 'Bahasa teks', [['id', 'Indonesia'], ['en', 'English']]),
         F.sel('status', 'Status', [['published', 'Terbit'], ['draft', 'Draf (tidak tampil di situs)']]),
         F.bool('in_brief', 'Tampilkan di carousel News Brief (beranda)'),
-        F.img('cover', 'Gambar sampul', { help: 'Rasio 3:2 disarankan, maks. 5 MB.' }),
+        F.img('cover', 'Gambar sampul', { ratio: '3:2', sizes: [[900, 600, 'Kecil'], [1500, 1000, 'Standar'], [2100, 1400, 'Besar']], sizeDefault: 1, spec: 'Disarankan 1500 × 1000 px (rasio 3:2).', help: 'Gambar otomatis dipotong ke rasio 3:2 dan dikecilkan. Asli maks. 15 MB.' }),
         F.area('dek', 'Ringkasan (1–2 kalimat)', { rows: 3 }),
         F.area('body', 'Isi artikel', { rows: 12, help: 'Pisahkan paragraf dengan baris kosong. "## Judul" untuk subjudul, "- " untuk daftar, **tebal**, [teks](https://tautan).' }),
         F.facts('facts', 'Detail (kotak samping)', { help: 'Pasangan label dan isi, mis. Tanggal / 18 Oktober 2025.' })
@@ -65,7 +65,7 @@
       search: m => m.name + ' ' + m.role,
       blank: () => ({ published: true, sort: 100, bio: '' }),
       fields: [F.text('name', 'Nama', { wide: true, required: true }), F.text('role', 'Jabatan', { required: true }), F.num('sort', 'Urutan', { help: 'Angka kecil tampil lebih dulu.' }),
-        F.img('photo', 'Foto', { help: 'Rasio 4:5 disarankan. Kosongkan untuk memakai inisial.' }), F.area('bio', 'Bio singkat (opsional)', { rows: 3 }), F.bool('published', 'Tampilkan di situs')]
+        F.img('photo', 'Foto', { ratio: '4:5', sizes: [[480, 600, 'Kecil'], [800, 1000, 'Standar'], [1200, 1500, 'Besar']], sizeDefault: 1, spec: 'Disarankan 800 × 1000 px (rasio 4:5).', help: 'Foto otomatis dipotong ke rasio 4:5 dan dikecilkan ke ukuran yang dipilih. JPG/PNG/WebP, asli maks. 15 MB. Kosongkan untuk memakai inisial.' }), F.area('bio', 'Bio singkat (opsional)', { rows: 3 }), F.bool('published', 'Tampilkan di situs')]
     },
     partners: {
       label: 'Mitra', one: 'mitra', table: 'partners', order: 'sort.asc,name.asc',
@@ -212,25 +212,57 @@
     syncVisibility();
     dlg.showModal(); $('#fields').scrollTop = 0;
   }
+  // Resize (and crop to ratio when given) in the browser, then upload to the "media" bucket.
+  function fitImage(file, { w, h, max, type = 'image/jpeg', q = 0.88 }) {
+    return new Promise((ok, fail) => {
+      const src = URL.createObjectURL(file), im = new Image();
+      im.onload = () => {
+        URL.revokeObjectURL(src);
+        let sx = 0, sy = 0, sw = im.naturalWidth, sh = im.naturalHeight, tw, th;
+        if (w && h) { // crop to the target ratio (center), then scale to w x h
+          const r = w / h; if (sw / sh > r) { const nw = sh * r; sx = (sw - nw) / 2; sw = nw; } else { const nh = sw / r; sy = (sh - nh) / 2; sh = nh; }
+          const k = Math.min(1, w / sw); tw = Math.round(sw * k); th = Math.round(sh * k);
+        } else { const k = Math.min(1, (max || 1600) / Math.max(sw, sh)); tw = Math.round(sw * k); th = Math.round(sh * k); }
+        const c = document.createElement('canvas'); c.width = tw; c.height = th;
+        const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.fillStyle = '#fff'; g.fillRect(0, 0, tw, th); g.drawImage(im, sx, sy, sw, sh, 0, 0, tw, th);
+        c.toBlob(bl => bl ? ok({ blob: bl, w: tw, h: th, ow: im.naturalWidth, oh: im.naturalHeight }) : fail(new Error('Gagal memproses gambar')), type, q);
+      };
+      im.onerror = () => { URL.revokeObjectURL(src); fail(new Error('File bukan gambar yang valid')); };
+      im.src = src;
+    });
+  }
+  const kb = n => n > 1048576 ? (n / 1048576).toFixed(2) + ' MB' : Math.round(n / 1024) + ' KB';
   function imageField(f, val, help) {
     const pv = h('div', { class: 'img__pv' }), url = h('input', { type: 'text', value: val || '', placeholder: 'Unggah file atau tempel URL gambar (https://…)', autocomplete: 'off' });
+    if (f.ratio) pv.style.aspectRatio = f.ratio.replace(':', ' / ');
+    const info = h('p', { class: 'help', style: 'margin:0' }, f.spec || '');
     const paint = () => { const v = url.value.trim(); pv.style.backgroundImage = /^https:\/\//.test(v) ? `url("${v}")` : /^assets\//.test(v) ? `url("${v}")` : ''; };
     const file = h('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp,image/gif', hidden: true });
+    const sizes = f.sizes || null, sel = sizes ? h('select', { 'aria-label': 'Ukuran foto' }, sizes.map(([w, hh, l], i) => h('option', { value: i, selected: i === (f.sizeDefault ?? 0) }, `${l} (${w} × ${hh} px)`))) : null;
     const up = h('button', { type: 'button', class: 'btn', onclick: () => file.click() }, 'Unggah gambar');
-    const clr = h('button', { type: 'button', class: 'btn', onclick: () => { url.value = ''; paint(); } }, 'Hapus');
+    const clr = h('button', { type: 'button', class: 'btn', onclick: () => { url.value = ''; paint(); info.textContent = f.spec || ''; } }, 'Hapus');
     file.addEventListener('change', async () => {
-      const fl = file.files[0]; if (!fl) return;
-      if (fl.size > 5 * 1024 * 1024) { toast('Ukuran gambar maksimal 5 MB.', true); return; }
-      up.disabled = true; up.textContent = 'Mengunggah…';
-      const name = `${Date.now()}-${fl.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-').slice(-60)}`;
-      const { error } = await sb.storage.from('media').upload(name, fl, { cacheControl: '31536000', contentType: fl.type });
+      const fl = file.files[0]; file.value = ''; if (!fl) return;
+      if (fl.size > 15 * 1024 * 1024) { toast('Ukuran file asli maksimal 15 MB.', true); return; }
+      up.disabled = true; up.textContent = 'Memproses…';
+      try {
+        let opt = { max: f.max || 1600 }; if (sizes) { const [w, hh] = sizes[+sel.value]; opt = { w, h: hh }; }
+        const gif = fl.type === 'image/gif'; let blob = fl, w0 = '', ext = fl.name.split('.').pop();
+        if (!gif) { const r = await fitImage(fl, opt); blob = r.blob; ext = 'jpg'; w0 = `${r.w} × ${r.h} px · ${kb(r.blob.size)} (asli ${r.ow} × ${r.oh} px, ${kb(fl.size)})`; }
+        else w0 = kb(fl.size);
+        if (blob.size > 5 * 1024 * 1024) throw new Error('Hasil masih lebih dari 5 MB, pilih ukuran lebih kecil.');
+        up.textContent = 'Mengunggah…';
+        const base = fl.name.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40) || 'foto';
+        const name = `${Date.now()}-${base}.${ext}`;
+        const { error } = await sb.storage.from('media').upload(name, blob, { cacheControl: '31536000', contentType: gif ? fl.type : 'image/jpeg' });
+        if (error) throw error;
+        url.value = sb.storage.from('media').getPublicUrl(name).data.publicUrl; paint(); info.textContent = 'Terunggah: ' + w0; toast('Gambar terunggah.');
+      } catch (e) { toast('Gagal: ' + (e.message || e), true); }
       up.disabled = false; up.textContent = 'Unggah gambar';
-      if (error) { toast('Gagal mengunggah: ' + error.message, true); return; }
-      url.value = sb.storage.from('media').getPublicUrl(name).data.publicUrl; paint(); toast('Gambar terunggah.');
     });
     url.addEventListener('input', paint); paint();
     readers[f.key] = () => url.value.trim() || null;
-    return h('div', { class: 'f' }, h('span', { class: 'lbl' }, f.label), h('div', { class: 'img' }, pv, h('div', { class: 'img__ctl' }, url, h('div', { style: 'display:flex;gap:8px' }, up, clr), file)), help);
+    return h('div', { class: 'f' }, h('span', { class: 'lbl' }, f.label), h('div', { class: 'img' }, pv, h('div', { class: 'img__ctl' }, url, sel ? h('label', { class: 'help', style: 'display:grid;gap:4px' }, 'Ukuran hasil', sel) : '', h('div', { style: 'display:flex;gap:8px' }, up, clr), info, file)), help);
   }
   function factsField(f, val, help) {
     const list = h('div'); const add = (k = '', v = '') => {

@@ -1185,3 +1185,21 @@ main > .section { border-radius: var(--r-sec) var(--r-sec) 0 0; margin-top: calc
   .marquee li { font-size: 14px; }
   .footer__base { flex-wrap: wrap; gap: 12px; font-size: 12.5px; }
 }
+
+/* ---------- Team cards: name + role appear on hover (desktop) ---------- */
+.person__cap { display: block; }
+.person__bio { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+@media (hover: hover) and (min-width: 900px) {
+  .person { position: relative; border-radius: var(--r-lg); overflow: hidden; outline-offset: 4px; }
+  .person::after { content: ""; position: absolute; inset: auto 0 0 0; height: 64%; pointer-events: none; z-index: 1;
+    background: linear-gradient(to top, rgba(6, 28, 19, 0.94) 8%, rgba(6, 28, 19, 0)); opacity: 0; transition: opacity 0.4s var(--ease); }
+  .person__cap { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: clamp(18px, 1.8vw, 30px); color: #fff; pointer-events: none;
+    opacity: 0; transform: translateY(14px); transition: opacity 0.35s var(--ease), transform 0.5s var(--ease); }
+  .person__cap h3 { margin: 0; font-size: clamp(18px, 1.5vw, 26px); color: #fff; }
+  .person__cap p { margin: 0.4em 0 0; color: rgba(255, 255, 255, 0.86); opacity: 1; }
+  .person__cap .person__bio { color: rgba(255, 255, 255, 0.7); font-size: clamp(13px, 0.9vw, 15px); }
+  .person:hover::after, .person:focus-visible::after, .person:focus-within::after { opacity: 1; }
+  .person:hover .person__cap, .person:focus-visible .person__cap, .person:focus-within .person__cap { opacity: 1; transform: none; }
+  .person:hover .person__photo span, .person:focus-visible .person__photo span { opacity: 0.0; transform: translateY(-6px); }
+  .person__photo span { transition: opacity 0.3s, transform 0.6s var(--ease); }
+}
