@@ -25,7 +25,7 @@
   const cover = (a, extra = '') => {
     if (hasPhoto(a)) return `<figure class="media${extra}"><img src="${esc(a.cover)}" alt="" loading="lazy"></figure>`;
     const d = new Date((a.event_date || a.published_at) + 'T00:00:00');
-    return `<figure class="media cover cover--${esc(a.category)}${extra}" aria-hidden="true"><span class="cover__in"><span class="cover__m">${MONTHS[d.getMonth()]} ${d.getFullYear()}</span><span class="cover__c">${esc(a.tag || CAT[a.category] || '')}</span><span class="cover__d">${String(d.getDate()).padStart(2, '0')}</span></span></figure>`;
+    return `<figure class="media cover cover--${esc(a.category)}${extra}" aria-hidden="true"><span class="cover__in"><span class="cover__m">${MONTHS[d.getMonth()]} ${d.getFullYear()}</span><span class="cover__c">${esc(a.tag || CAT[a.category] || '')}</span></span></figure>`;
   };
   const aurl = slug => `${root}article.html?s=${encodeURIComponent(slug)}`;
 
@@ -81,7 +81,7 @@
   }).join('')}</ol>`;
 
   const initials = n => { const w = n.split(',')[0].split(/\s+/).filter(x => /^[A-Za-z]/.test(x) && !/^(dr|drs|prof|ir)\.?$/i.test(x)); return (w.length > 1 ? [w[0], w[w.length - 1]] : w).map(x => x[0].toUpperCase()).join(''); };
-  const person = (m, i) => `<li class="person reveal" tabindex="0" style="--d:${(i % 3) * 0.08}s"><div class="person__photo${m.photo ? ' has-photo' : ''}">${m.photo && /^https:\/\//.test(m.photo) ? `<img src="${esc(m.photo)}" alt="" loading="lazy">` : `<span aria-hidden="true">${esc(initials(m.name))}</span>`}</div>
+  const person = (m, i) => `<li class="person reveal" tabindex="0" style="--d:${(i % 3) * 0.08}s"><div class="person__photo${m.photo ? ' has-photo' : ''}">${m.photo && /^https:\/\//.test(m.photo) ? `<img src="${esc(m.photo)}" alt="" loading="lazy">` : ''}</div>
 <div class="person__cap"><h3>${esc(m.name)}</h3><p>${esc(m.role)}</p>${m.bio ? `<p class="person__bio">${esc(m.bio)}</p>` : ''}</div></li>`;
 
   const partnerCard = (p, i) => `<li class="partner reveal" style="--d:${i * 0.06}s"><h3>${esc(p.name)}</h3><p>${esc(p.country)}</p></li>`;
