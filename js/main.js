@@ -122,13 +122,43 @@
   }
 
   /* ---------- Story dialog (home only) ---------- */
-  const dlg = $('#story'), sv = $('#story-video'), openStory = $('#open-story');
+  const dlg = $('#story'), sv = $('#story-video'), openStory = $('#open-story'), frame = $('#story-frame');
+  // Turns a YouTube / Google Drive share link into an embeddable URL (or null if it is not one).
+  const embedUrl = raw => {
+    let u; try { u = new URL((raw || '').trim()); } catch { return null; }
+    if (u.protocol !== 'https:') return null;
+    const host = u.hostname.replace(/^www\.|^m\./, '');
+    let id = null;
+    if (host === 'youtu.be') id = u.pathname.slice(1).split('/')[0];
+    else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+      id = u.searchParams.get('v') || (u.pathname.match(/^\/(?:embed|shorts|live|v)\/([\w-]{6,})/) || [])[1] || null;
+    }
+    if (id && /^[\w-]{6,20}$/.test(id)) return { kind: 'yt', src: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1` };
+    if (host === 'drive.google.com') {
+      const m = u.pathname.match(/\/file\/d\/([\w-]+)/) || null; const did = m ? m[1] : u.searchParams.get('id');
+      if (did && /^[\w-]{10,}$/.test(did)) return { kind: 'drive', src: `https://drive.google.com/file/d/${did}/preview` };
+    }
+    if (/\.(mp4|webm)(\?|$)/i.test(u.href)) return { kind: 'file', src: u.href };
+    return null;
+  };
   if (dlg && sv && openStory) {
-    openStory.addEventListener('click', () => { dlg.showModal(); sv.currentTime = 0; sv.play().catch(() => {}); });
-    const closeStory = () => { sv.pause(); dlg.close(); };
+    const stop = () => { sv.pause(); if (frame) { frame.replaceChildren(); frame.hidden = true; } sv.hidden = false; };
+    openStory.addEventListener('click', () => {
+      const e = embedUrl((window.EHA_SET || {}).story_video);
+      dlg.showModal();
+      if (e && e.kind !== 'file' && frame) {
+        sv.pause(); sv.hidden = true; frame.hidden = false;
+        const f = document.createElement('iframe'); f.src = e.src; f.title = 'Our Story'; f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'; f.allowFullscreen = true; f.referrerPolicy = 'strict-origin-when-cross-origin';
+        frame.replaceChildren(f);
+      } else {
+        if (e && e.kind === 'file' && sv.dataset.src !== e.src) { sv.dataset.src = e.src; sv.removeAttribute('poster'); sv.replaceChildren(); sv.src = e.src; sv.load(); }
+        sv.hidden = false; sv.currentTime = 0; sv.play().catch(() => {});
+      }
+    });
+    const closeStory = () => { stop(); dlg.close(); };
     $('#close-story').addEventListener('click', closeStory);
-    dlg.addEventListener('click', e => { if (e.target === dlg) closeStory(); });
-    dlg.addEventListener('close', () => sv.pause());
+    dlg.addEventListener('click', ev => { if (ev.target === dlg) closeStory(); });
+    dlg.addEventListener('close', stop);
   }
 
   /* ---------- Reveal on scroll ---------- */
