@@ -1206,3 +1206,7 @@ main > .section { border-radius: var(--r-sec) var(--r-sec) 0 0; margin-top: calc
 
 /* no big day numbers on covers, no initials on team placeholders */
 .cover__d, .person__photo > span { display: none !important; }
+
+/* every hero fills the first screen; the next section starts below the fold */
+.hero, .hero--page, .hero--article { min-height: calc(100vh + var(--r-sec)); min-height: calc(100svh + var(--r-sec)); }
+.hero > .hero__inner, .hero .hero__inner { margin-bottom: var(--r-sec); }
