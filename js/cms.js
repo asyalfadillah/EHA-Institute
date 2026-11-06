@@ -84,7 +84,8 @@
   const person = (m, i) => `<li class="person reveal" tabindex="0" style="--d:${(i % 3) * 0.08}s"><div class="person__photo${m.photo ? ' has-photo' : ''}">${m.photo && /^https:\/\//.test(m.photo) ? `<img src="${esc(m.photo)}" alt="" loading="lazy">` : ''}</div>
 <div class="person__cap"><h3>${esc(m.name)}</h3><p>${esc(m.role)}</p>${m.bio ? `<p class="person__bio">${esc(m.bio)}</p>` : ''}</div></li>`;
 
-  const partnerCard = (p, i) => `<li class="partner reveal" style="--d:${i * 0.06}s"><h3>${esc(p.name)}</h3><p>${esc(p.country)}</p></li>`;
+  const logoOf = p => (/^https:\/\//i.test(p.logo || '') ? p.logo : '');
+  const partnerCard = (p, i) => `<li class="partner reveal" style="--d:${i * 0.06}s">${logoOf(p) ? `<img class="partner__logo" src="${esc(logoOf(p))}" alt="" width="212" height="30" loading="lazy">` : ''}<h3>${esc(p.name)}</h3><p>${esc(p.country)}</p></li>`;
 
   const stats = D => {
     const countries = new Set(D.partners.map(p => p.country).filter(Boolean)).size;
@@ -103,7 +104,7 @@
 
   /* ---------- page renderers ---------- */
   const setHTML = (el, html) => { if (el) el.innerHTML = html; };
-  function render(D) {
+  function render(D, again) {
     const by = Object.fromEntries(D.articles.map(a => [a.slug, a]));
     const arts = D.articles;
 
@@ -124,9 +125,9 @@
       setHTML(lat, lead(arts[0]) + `<div class="latest__side">${arts.slice(1, 4).map((a, i) => card(a, (i + 1) * 0.08)).join('')}</div>`);
     }
 
-    // news brief carousel
+    // news brief carousel (set up once; the carousel script owns it afterwards)
     const brief = $('[data-carousel="brief"]');
-    if (brief) {
+    if (brief && !again) {
       const b = arts.filter(a => a.in_brief);
       const ctr = $('.controls', brief);
       if (b.length) { $$('[data-slide]', brief).forEach(n => n.remove()); ctr.insertAdjacentHTML('beforebegin', b.map(briefSlide).join('')); }
@@ -134,7 +135,7 @@
     }
 
     // events
-    const eb = $('#events-slides');
+    const eb = again ? null : $('#events-slides');
     if (eb) {
       const ev = arts.filter(a => a.category === 'event' && a.event_date);
       const today = new Date().toISOString().slice(0, 10);
@@ -151,7 +152,7 @@
     $$('.stats').forEach(s => setHTML(s, stats(D)));
     const mq = $$('.marquee__track ul');
     if (mq.length && D.partners.length) {
-      const li = D.partners.map(p => `<li><a href="${root}about.html#partners">${esc(p.name)}</a></li>`).join('');
+      const li = D.partners.map(p => `<li><a href="${root}about.html#partners"${logoOf(p) ? ' class="has-logo"' : ''}>${logoOf(p) ? `<img src="${esc(logoOf(p))}" alt="${esc(p.name)}" width="212" height="30" loading="lazy">` : esc(p.name)}</a></li>`).join('');
       mq[0].innerHTML = li; if (mq[1]) mq[1].innerHTML = li.replace(/<a /g, '<a tabindex="-1" ');
     }
     const pg = $('.partners-grid'); if (pg && D.partners.length) setHTML(pg, D.partners.map(partnerCard).join(''));
@@ -215,5 +216,38 @@
       D = window.EHA_FALLBACK ? { ...window.EHA_FALLBACK, live: false } : null;
     }
     if (D) { try { render(D); } catch (err) { console.error('EHA render', err); } }
+    if (D && D.live) live(D);
   })();
+
+  /* ---------- live updates: Supabase Realtime (websocket) + a light poll as a safety net ---------- */
+  function live(first) {
+    let sig = JSON.stringify(first), busy = false, timer = 0;
+    const refresh = async () => {
+      if (busy) return; busy = true;
+      try {
+        const D = await load(), n = JSON.stringify(D);
+        if (n !== sig) { sig = n; render(D, true); $$('.reveal').forEach(el => el.classList.add('in')); }
+      } catch (e) { /* keep what is on screen */ }
+      busy = false;
+    };
+    const soon = () => { clearTimeout(timer); timer = setTimeout(refresh, 400); };
+    // 1) Realtime: any insert / update / delete on the content tables
+    const tables = ['articles', 'team_members', 'partners', 'programs', 'site_settings'];
+    let ws, beat, tries = 0;
+    const open = () => {
+      try { ws = new WebSocket(`${cfg.url.replace(/^http/, 'ws')}/realtime/v1/websocket?apikey=${encodeURIComponent(cfg.key)}&vsn=1.0.0`); } catch { return; }
+      ws.onopen = () => {
+        tries = 0;
+        ws.send(JSON.stringify({ topic: 'realtime:eha-live', event: 'phx_join', ref: '1', join_ref: '1', payload: { config: { broadcast: { ack: false, self: false }, presence: { key: '' }, postgres_changes: tables.map(table => ({ event: '*', schema: 'public', table })) }, access_token: cfg.key } }));
+        beat = setInterval(() => ws.readyState === 1 && ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(Date.now()) })), 25000);
+      };
+      ws.onmessage = ev => { try { const m = JSON.parse(ev.data); if (m.event === 'postgres_changes') soon(); } catch {} };
+      ws.onclose = () => { clearInterval(beat); setTimeout(open, Math.min(30000, 1500 * 2 ** Math.min(tries++, 5))); };
+      ws.onerror = () => { try { ws.close(); } catch {} };
+    };
+    open();
+    // 2) Safety net: also catches rows that were just unpublished (Realtime cannot show those to visitors)
+    setInterval(() => { if (!document.hidden) refresh(); }, 45000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+  }
 })();

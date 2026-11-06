@@ -73,7 +73,8 @@
       row: p => ({ t: p.name, m: p.country + (p.published ? '' : ' · disembunyikan'), ini: p.name[0], badge: p.published ? '' : 'Draf' }),
       search: p => p.name + ' ' + p.country,
       blank: () => ({ published: true, sort: 100 }),
-      fields: [F.text('name', 'Nama institusi', { wide: true, required: true }), F.text('country', 'Negara'), F.num('sort', 'Urutan'), F.text('url', 'Situs web (opsional)', { wide: true, help: 'Diawali https://' }), F.bool('published', 'Tampilkan di situs')]
+      fields: [F.text('name', 'Nama institusi', { wide: true, required: true }), F.text('country', 'Negara'), F.num('sort', 'Urutan'),
+        F.img('logo', 'Logo mitra (opsional)', { ratio: '212:30', fit: 'contain', png: true, sizes: [[212, 30, 'Standar'], [424, 60, 'Tajam 2×']], sizeDefault: 0, spec: 'Ukuran logo 212 × 30 px (PNG transparan).', help: 'Logo otomatis dimuat utuh (tanpa terpotong) ke kanvas 212 × 30 px. Pilih "Tajam 2×" (424 × 60 px) agar tidak buram di layar retina. Lebih baik pakai logo horizontal dengan latar transparan.' }), F.text('url', 'Situs web (opsional)', { wide: true, help: 'Diawali https://' }), F.bool('published', 'Tampilkan di situs')]
     },
     programs: {
       label: 'Riset & Layanan', one: 'program', table: 'programs', order: 'kind.asc,sort.asc',
@@ -101,13 +102,29 @@
     $('#auth-toggle').textContent = signup ? 'Sudah punya akun? Masuk' : 'Belum punya akun? Daftar';
     $('#a-pass').autocomplete = signup ? 'new-password' : 'current-password'; $('#auth-note').textContent = '';
   });
+  /* ---------- CAPTCHA (Cloudflare Turnstile / hCaptcha; verified by Supabase Auth) ---------- */
+  const captcha = (() => {
+    const c = cfg.captcha || {}, on = !!(c.siteKey && /^(turnstile|hcaptcha)$/.test(c.provider));
+    let id = null, tok = '';
+    const box = $('#captcha');
+    if (!on || !box) return { on: false, token: () => '', reset() {} };
+    const api = c.provider === 'turnstile' ? 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit' : 'https://js.hcaptcha.com/1/api.js?render=explicit';
+    const lib = () => (c.provider === 'turnstile' ? window.turnstile : window.hcaptcha);
+    const mount = () => { id = lib().render(box, { sitekey: c.siteKey, theme: 'light', callback: t => { tok = t; }, 'expired-callback': () => { tok = ''; }, 'error-callback': () => { tok = ''; } }); };
+    box.hidden = false;
+    const sc = document.createElement('script'); sc.src = api; sc.async = true; sc.onload = () => { const w = setInterval(() => { if (lib() && lib().render) { clearInterval(w); mount(); } }, 50); };
+    document.head.appendChild(sc);
+    return { on: true, token: () => tok, reset() { tok = ''; try { id !== null && lib().reset(id); } catch {} } };
+  })();
   $('#auth-form').addEventListener('submit', async e => {
     e.preventDefault();
     const note = $('#auth-note'), email = $('#a-email').value.trim(), password = $('#a-pass').value;
     note.className = 'note';
     if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8) { note.textContent = 'Isi email yang valid dan kata sandi minimal 8 karakter.'; note.classList.add('err'); return; }
+    const cap = captcha.token(); if (captcha.on && !cap) { note.textContent = 'Selesaikan verifikasi CAPTCHA terlebih dahulu.'; note.classList.add('err'); return; }
     $('#auth-go').disabled = true;
-    const { data, error } = signup ? await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.href.split('#')[0] } }) : await sb.auth.signInWithPassword({ email, password });
+    const { data, error } = signup ? await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.href.split('#')[0], captchaToken: cap || undefined } }) : await sb.auth.signInWithPassword({ email, password, options: { captchaToken: cap || undefined } });
+    captcha.reset();
     $('#auth-go').disabled = false;
     if (error) { note.textContent = error.message === 'Invalid login credentials' ? 'Email atau kata sandi salah.' : error.message; note.classList.add('err'); return; }
     if (signup && !data.session) { note.textContent = 'Akun dibuat. Buka email Anda dan klik tautan konfirmasi, lalu masuk di sini.'; note.classList.add('ok'); return; }
@@ -213,18 +230,22 @@
     dlg.showModal(); $('#fields').scrollTop = 0;
   }
   // Resize (and crop to ratio when given) in the browser, then upload to the "media" bucket.
-  function fitImage(file, { w, h, max, type = 'image/jpeg', q = 0.88 }) {
+  function fitImage(file, { w, h, max, fit, type = 'image/jpeg', q = 0.88 }) {
     return new Promise((ok, fail) => {
       const src = URL.createObjectURL(file), im = new Image();
       im.onload = () => {
         URL.revokeObjectURL(src);
         let sx = 0, sy = 0, sw = im.naturalWidth, sh = im.naturalHeight, tw, th;
-        if (w && h) { // crop to the target ratio (center), then scale to w x h
+        if (w && h && fit === 'contain') { // keep the whole picture inside w x h, centered
+          tw = w; th = h;
+        } else if (w && h) { // crop to the target ratio (center), then scale to w x h
           const r = w / h; if (sw / sh > r) { const nw = sh * r; sx = (sw - nw) / 2; sw = nw; } else { const nh = sw / r; sy = (sh - nh) / 2; sh = nh; }
           const k = Math.min(1, w / sw); tw = Math.round(sw * k); th = Math.round(sh * k);
         } else { const k = Math.min(1, (max || 1600) / Math.max(sw, sh)); tw = Math.round(sw * k); th = Math.round(sh * k); }
         const c = document.createElement('canvas'); c.width = tw; c.height = th;
-        const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.fillStyle = '#fff'; g.fillRect(0, 0, tw, th); g.drawImage(im, sx, sy, sw, sh, 0, 0, tw, th);
+        const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+        if (fit === 'contain') { const k = Math.min(tw / sw, th / sh), dw = Math.round(sw * k), dh = Math.round(sh * k); g.drawImage(im, 0, 0, sw, sh, Math.round((tw - dw) / 2), Math.round((th - dh) / 2), dw, dh); }
+        else { if (type !== 'image/png') { g.fillStyle = '#fff'; g.fillRect(0, 0, tw, th); } g.drawImage(im, sx, sy, sw, sh, 0, 0, tw, th); }
         c.toBlob(bl => bl ? ok({ blob: bl, w: tw, h: th, ow: im.naturalWidth, oh: im.naturalHeight }) : fail(new Error('Gagal memproses gambar')), type, q);
       };
       im.onerror = () => { URL.revokeObjectURL(src); fail(new Error('File bukan gambar yang valid')); };
@@ -246,15 +267,15 @@
       if (fl.size > 15 * 1024 * 1024) { toast('Ukuran file asli maksimal 15 MB.', true); return; }
       up.disabled = true; up.textContent = 'Memproses…';
       try {
-        let opt = { max: f.max || 1600 }; if (sizes) { const [w, hh] = sizes[+sel.value]; opt = { w, h: hh }; }
+        let opt = { max: f.max || 1600 }; if (sizes) { const [w, hh] = sizes[+sel.value]; opt = { w, h: hh, fit: f.fit, type: f.png ? 'image/png' : 'image/jpeg' }; }
         const gif = fl.type === 'image/gif'; let blob = fl, w0 = '', ext = fl.name.split('.').pop();
-        if (!gif) { const r = await fitImage(fl, opt); blob = r.blob; ext = 'jpg'; w0 = `${r.w} × ${r.h} px · ${kb(r.blob.size)} (asli ${r.ow} × ${r.oh} px, ${kb(fl.size)})`; }
+        if (!gif) { const r = await fitImage(fl, opt); blob = r.blob; ext = opt.type === 'image/png' ? 'png' : 'jpg'; w0 = `${r.w} × ${r.h} px · ${kb(r.blob.size)} (asli ${r.ow} × ${r.oh} px, ${kb(fl.size)})`; }
         else w0 = kb(fl.size);
         if (blob.size > 5 * 1024 * 1024) throw new Error('Hasil masih lebih dari 5 MB, pilih ukuran lebih kecil.');
         up.textContent = 'Mengunggah…';
         const base = fl.name.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40) || 'foto';
         const name = `${Date.now()}-${base}.${ext}`;
-        const { error } = await sb.storage.from('media').upload(name, blob, { cacheControl: '31536000', contentType: gif ? fl.type : 'image/jpeg' });
+        const { error } = await sb.storage.from('media').upload(name, blob, { cacheControl: '31536000', contentType: gif ? fl.type : blob.type || 'image/jpeg' });
         if (error) throw error;
         url.value = sb.storage.from('media').getPublicUrl(name).data.publicUrl; paint(); info.textContent = 'Terunggah: ' + w0; toast('Gambar terunggah.');
       } catch (e) { toast('Gagal: ' + (e.message || e), true); }

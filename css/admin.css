@@ -106,3 +106,6 @@ a { color: inherit; }
   .item { grid-template-columns: 48px 1fr; } .item .badge { grid-column: 2; justify-self: start; }
   #filter { min-width: 0; flex: 1; } .main__tools { width: 100%; }
 }
+
+.captcha { margin: 14px 0 4px; min-height: 65px; display: flex; justify-content: center; }
+.captcha[hidden] { display: none; }

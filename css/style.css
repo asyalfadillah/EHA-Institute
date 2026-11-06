@@ -1214,3 +1214,8 @@ main > .section { border-radius: var(--r-sec) var(--r-sec) 0 0; margin-top: calc
 .story-dialog__frame { aspect-ratio: 16 / 9; background: #000; }
 .story-dialog__frame iframe { display: block; width: 100%; height: 100%; border: 0; }
 .story-dialog video[hidden], .story-dialog__frame[hidden] { display: none; }
+
+/* partner logos (uploaded at 212 x 30 px) */
+.partner__logo { display: block; width: 212px; max-width: 100%; height: 30px; object-fit: contain; object-position: left center; margin-bottom: 16px; }
+.marquee a.has-logo { display: inline-flex; align-items: center; background: #fff; border-radius: 999px; padding: 10px 20px; text-decoration: none; }
+.marquee a.has-logo img { display: block; width: auto; height: 30px; max-width: 212px; object-fit: contain; }
