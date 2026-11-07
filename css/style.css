@@ -562,6 +562,12 @@ a:hover .link-line, a:focus-visible .link-line { background-size: 100% 2px; }
 
 /* hero headline: words slide up out of a mask */
 .hero h1.is-split { animation: none; }
+/* Hold the headline back until main.js has split it, so it animates exactly once (no "rise" then "wordUp" replay).
+   Failsafe: it shows by itself after 3.4s even if the script never runs. */
+@media (prefers-reduced-motion: no-preference) {
+  .js .hero h1:not(.is-split) { animation: hShow 0s linear 3.4s forwards; opacity: 0; transform: none; }
+  @keyframes hShow { to { opacity: 1; } }
+}
 .w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.14em; margin-bottom: -0.14em; }
 .w > span { display: inline-block; transform: translateY(115%); animation: wordUp 0.95s var(--ease) forwards; animation-delay: calc(0.2s + var(--i) * 0.07s); }
 @keyframes wordUp { to { transform: none; } }
