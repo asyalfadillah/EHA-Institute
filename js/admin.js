@@ -104,17 +104,17 @@
   });
   /* ---------- CAPTCHA (Cloudflare Turnstile / hCaptcha; verified by Supabase Auth) ---------- */
   const captcha = (() => {
-    const c = cfg.captcha || {}, on = !!(c.siteKey && /^(turnstile|hcaptcha)$/.test(c.provider));
+    const c = cfg.captcha || {}, on = !!(c.siteKey && /^(recaptcha|turnstile|hcaptcha)$/.test(c.provider));
     let id = null, tok = '';
     const box = $('#captcha');
     if (!on || !box) return { on: false, token: () => '', reset() {} };
-    const api = c.provider === 'turnstile' ? 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit' : 'https://js.hcaptcha.com/1/api.js?render=explicit';
-    const lib = () => (c.provider === 'turnstile' ? window.turnstile : window.hcaptcha);
+    const api = { recaptcha: 'https://www.google.com/recaptcha/api.js?render=explicit', turnstile: 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit', hcaptcha: 'https://js.hcaptcha.com/1/api.js?render=explicit' }[c.provider];
+    const lib = () => ({ recaptcha: window.grecaptcha, turnstile: window.turnstile, hcaptcha: window.hcaptcha })[c.provider];
     const mount = () => { id = lib().render(box, { sitekey: c.siteKey, theme: 'light', callback: t => { tok = t; }, 'expired-callback': () => { tok = ''; }, 'error-callback': () => { tok = ''; } }); };
     box.hidden = false;
     const sc = document.createElement('script'); sc.src = api; sc.async = true; sc.onload = () => { const w = setInterval(() => { if (lib() && lib().render) { clearInterval(w); mount(); } }, 50); };
     document.head.appendChild(sc);
-    return { on: true, token: () => tok, reset() { tok = ''; try { id !== null && lib().reset(id); } catch {} } };
+    return { on: true, supabase: c.provider !== 'recaptcha', token: () => tok, reset() { tok = ''; try { id !== null && lib().reset(id); } catch {} } };
   })();
   $('#auth-form').addEventListener('submit', async e => {
     e.preventDefault();
@@ -123,7 +123,7 @@
     if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8) { note.textContent = 'Isi email yang valid dan kata sandi minimal 8 karakter.'; note.classList.add('err'); return; }
     const cap = captcha.token(); if (captcha.on && !cap) { note.textContent = 'Selesaikan verifikasi CAPTCHA terlebih dahulu.'; note.classList.add('err'); return; }
     $('#auth-go').disabled = true;
-    const { data, error } = signup ? await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.href.split('#')[0], captchaToken: cap || undefined } }) : await sb.auth.signInWithPassword({ email, password, options: { captchaToken: cap || undefined } });
+    const { data, error } = signup ? await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.href.split('#')[0], captchaToken: captcha.supabase ? cap || undefined : undefined } }) : await sb.auth.signInWithPassword({ email, password, options: { captchaToken: captcha.supabase ? cap || undefined : undefined } });
     captcha.reset();
     $('#auth-go').disabled = false;
     if (error) { note.textContent = error.message === 'Invalid login credentials' ? 'Email atau kata sandi salah.' : error.message; note.classList.add('err'); return; }
