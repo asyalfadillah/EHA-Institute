@@ -21,7 +21,11 @@
   const today = () => new Date().toISOString().slice(0, 10);
 
   if (!window.supabase || !cfg) { $('#boot').textContent = 'Tidak dapat memuat pustaka Supabase. Periksa koneksi internet.'; return; }
-  const sb = window.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true } });
+  // Session lives in sessionStorage: closing the tab (or the browser) signs the admin out.
+  const sessStore = (() => { try { sessionStorage.setItem('_t', '1'); sessionStorage.removeItem('_t'); return sessionStorage; } catch { return undefined; } })();
+  try { Object.keys(localStorage).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => localStorage.removeItem(k)); } catch {} // drop sessions saved by older versions
+  const sb = window.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true, storage: sessStore } });
+  const IDLE_MS = 5 * 60 * 1000, WARN_MS = 30 * 1000;
 
   /* ---------- entities ---------- */
   const F = {
@@ -130,16 +134,34 @@
     if (signup && !data.session) { note.textContent = 'Akun dibuat. Buka email Anda dan klik tautan konfirmasi, lalu masuk di sini.'; note.classList.add('ok'); return; }
     await afterLogin(data.user || data.session?.user);
   });
-  const signOut = async () => { await sb.auth.signOut(); user = null; show('auth'); };
-  $('#out').addEventListener('click', signOut); $('#claim-out').addEventListener('click', signOut);
+  const signOut = async (reason) => {
+    idle.stop(); await sb.auth.signOut(); user = null; show('auth');
+    const n = $('#auth-note'); if (n) { n.className = reason ? 'note err' : 'note'; n.textContent = typeof reason === 'string' ? reason : ''; }
+  };
+  /* ---------- auto sign-out after 5 minutes without activity ---------- */
+  const idle = (() => {
+    let last = Date.now(), tm = 0, warned = false;
+    const bump = () => { last = Date.now(); warned = false; };
+    const tick = () => {
+      const gap = Date.now() - last; // Date.now() keeps counting while the laptop sleeps or the tab is in the background
+      if (gap >= IDLE_MS) { signOut('Anda keluar otomatis karena tidak ada aktivitas selama 5 menit. Silakan masuk kembali.'); }
+      else if (gap >= IDLE_MS - WARN_MS && !warned) { warned = true; toast('Tidak ada aktivitas. Anda akan keluar otomatis dalam 30 detik.', true); }
+    };
+    const evs = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'scroll', 'touchstart'];
+    return {
+      start() { bump(); evs.forEach(e => addEventListener(e, bump, { passive: true, capture: true })); document.addEventListener('visibilitychange', tick); clearInterval(tm); tm = setInterval(tick, 5000); },
+      stop() { evs.forEach(e => removeEventListener(e, bump, { capture: true })); document.removeEventListener('visibilitychange', tick); clearInterval(tm); }
+    };
+  })();
+  $('#out').addEventListener('click', () => signOut()); $('#claim-out').addEventListener('click', () => signOut());
 
   async function afterLogin(u) {
     user = u;
     const { data: ok, error } = await sb.rpc('is_admin');
     if (error) { toast(error.message, true); show('auth'); return; }
-    if (ok) { show('app'); $('#who').textContent = u.email; buildTabs(); await switchTab(tab); return; }
+    if (ok) { show('app'); idle.start(); $('#who').textContent = u.email; buildTabs(); await switchTab(tab); return; }
     // not an admin: offer to claim the very first admin slot (the database refuses if one exists)
-    show('claim');
+    show('claim'); idle.start();
     $('#claim-text').textContent = `Anda masuk sebagai ${u.email}. Jika belum ada admin sama sekali, Anda bisa menjadi admin pertama. Jika sudah ada, minta admin yang ada untuk menambahkan email ini di menu Admin.`;
     $('#claim-go').hidden = false;
   }
