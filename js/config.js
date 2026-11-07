@@ -3,7 +3,7 @@
 window.EHA_CONFIG = {
   url: 'https://audkmlwqoiiosomhjwtg.supabase.co',
   key: 'sb_publishable_O5Eiru9wbt1E9HR0fGi0RQ_SYHo0SlX',
-  // CAPTCHA di form login /admineha. provider: 'recaptcha' (Google reCAPTCHA v2 "Saya bukan robot"), 'turnstile' atau 'hcaptcha'.
+  // CAPTCHA di form login /admineha (Cloudflare Turnstile, diverifikasi server oleh Supabase Auth). provider: 'turnstile' atau 'hcaptcha'.
   // Isi siteKey (kunci publik). Catatan: hanya turnstile/hcaptcha yang diverifikasi server oleh Supabase Auth.
-  captcha: { provider: 'recaptcha', siteKey: '' }
+  captcha: { provider: 'turnstile', siteKey: '0x4AAAAAAF3dobiXOdIti3GT' }
 };
