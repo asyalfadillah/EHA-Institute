@@ -129,3 +129,7 @@ a { color: inherit; }
 .captcha { flex-direction: column; align-items: center; }
 #auth-go:disabled, #auth-go:disabled:hover { background: #cfd5d2; border-color: #cfd5d2; color: #7b8681; cursor: not-allowed; box-shadow: none; transform: none; }
 @keyframes capSpin { to { transform: rotate(360deg); } }
+
+.cap[hidden] { display: none; }
+input:-webkit-autofill { animation: afIn 0.01s; }
+@keyframes afIn { from { opacity: 1; } to { opacity: 1; } }

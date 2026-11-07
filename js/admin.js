@@ -123,9 +123,11 @@
       txt.textContent = { idle: 'Saya bukan robot', busy: 'Memverifikasi…', ok: 'Verifikasi berhasil', err: 'Gagal, klik untuk coba lagi' }[state];
     };
     const set = (st, t = '') => { state = st; tok = t; paint(); onChange(); };
-    const opts = { sitekey: c.siteKey, theme: 'light', callback: t => set('ok', t), 'expired-callback': () => set('idle'), 'error-callback': () => set('err') };
+    const showBox = on2 => { if (ui) ui.hidden = !on2; };
+    // If Cloudflare needs a real challenge it draws its own box: show only that one (never two CAPTCHAs at once).
+    const opts = { sitekey: c.siteKey, theme: 'light', callback: t => { showBox(true); set('ok', t); }, 'expired-callback': () => { showBox(true); set('idle'); }, 'error-callback': () => { showBox(true); set('err'); }, 'timeout-callback': () => { showBox(true); set('idle'); }, 'before-interactive-callback': () => showBox(false), 'after-interactive-callback': () => {} };
     const mount = () => {
-      ready = true;
+      if (ready) return; ready = true;
       id = lib().render(own ? mountEl : box, own ? { ...opts, execution: 'execute', appearance: 'interaction-only' } : opts);
     };
     box.hidden = false;
@@ -148,8 +150,11 @@
   })();
   // The submit button stays grey and disabled until the CAPTCHA has succeeded.
   let busyLogin = false;
-  const syncGo = () => { goBtn.disabled = busyLogin || (captcha.on && !captcha.token()); };
-  captcha.onChange(syncGo); syncGo();
+  const formOk = () => /^\S+@\S+\.\S+$/.test($('#a-email').value.trim()) && $('#a-pass').value.length >= 8;
+  const syncGo = () => { goBtn.disabled = busyLogin || !formOk() || (captcha.on && !captcha.token()); };
+  captcha.onChange(syncGo); ['#a-email', '#a-pass'].forEach(q => $(q).addEventListener('input', syncGo)); syncGo();
+  setTimeout(syncGo, 400); setTimeout(syncGo, 1500); // browsers may autofill saved logins without firing "input"
+  addEventListener('animationstart', e => { if (e.target.matches && e.target.matches('input')) syncGo(); }, true);
   $('#auth-form').addEventListener('submit', async e => {
     e.preventDefault();
     const note = $('#auth-note'), email = $('#a-email').value.trim(), password = $('#a-pass').value;
