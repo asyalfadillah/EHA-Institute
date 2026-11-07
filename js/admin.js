@@ -107,29 +107,58 @@
     $('#a-pass').autocomplete = signup ? 'new-password' : 'current-password'; $('#auth-note').textContent = '';
   });
   /* ---------- CAPTCHA (Cloudflare Turnstile / hCaptcha; verified by Supabase Auth) ---------- */
+  const goBtn = $('#auth-go');
   const captcha = (() => {
     const c = cfg.captcha || {}, on = !!(c.siteKey && /^(recaptcha|turnstile|hcaptcha)$/.test(c.provider));
-    let id = null, tok = '';
+    let id = null, tok = '', state = 'idle', ready = false, onChange = () => {};
     const box = $('#captcha');
-    if (!on || !box) return { on: false, token: () => '', reset() {} };
+    if (!on || !box) return { on: false, token: () => '', reset() {}, onChange(f) {} };
+    const own = c.provider === 'turnstile'; // Turnstile gets a manual "I'm not a robot" box: it only verifies after the visitor clicks it
     const api = { recaptcha: 'https://www.google.com/recaptcha/api.js?render=explicit', turnstile: 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit', hcaptcha: 'https://js.hcaptcha.com/1/api.js?render=explicit' }[c.provider];
     const lib = () => ({ recaptcha: window.grecaptcha, turnstile: window.turnstile, hcaptcha: window.hcaptcha })[c.provider];
-    const mount = () => { id = lib().render(box, { sitekey: c.siteKey, theme: 'light', callback: t => { tok = t; }, 'expired-callback': () => { tok = ''; }, 'error-callback': () => { tok = ''; } }); };
+    let ui, txt, mountEl;
+    const paint = () => {
+      if (!ui) return;
+      ui.dataset.state = state; ui.setAttribute('aria-checked', state === 'ok' ? 'true' : 'false');
+      txt.textContent = { idle: 'Saya bukan robot', busy: 'Memverifikasi…', ok: 'Verifikasi berhasil', err: 'Gagal, klik untuk coba lagi' }[state];
+    };
+    const set = (st, t = '') => { state = st; tok = t; paint(); onChange(); };
+    const opts = { sitekey: c.siteKey, theme: 'light', callback: t => set('ok', t), 'expired-callback': () => set('idle'), 'error-callback': () => set('err') };
+    const mount = () => {
+      ready = true;
+      id = lib().render(own ? mountEl : box, own ? { ...opts, execution: 'execute', appearance: 'interaction-only' } : opts);
+    };
     box.hidden = false;
+    if (own) {
+      ui = document.createElement('button'); ui.type = 'button'; ui.className = 'cap'; ui.setAttribute('role', 'checkbox'); ui.setAttribute('aria-checked', 'false');
+      ui.innerHTML = '<span class="cap__box" aria-hidden="true"></span><span class="cap__txt"></span><small class="cap__by">Cloudflare<br>Turnstile</small>';
+      txt = ui.querySelector('.cap__txt'); mountEl = document.createElement('div'); mountEl.className = 'cap__mount';
+      box.append(ui, mountEl); paint();
+      ui.addEventListener('click', () => {
+        if (!ready || state === 'busy' || state === 'ok') return;
+        set('busy'); try { lib().reset(id); lib().execute(id); } catch { set('err'); }
+      });
+    }
     const sc = document.createElement('script'); sc.src = api; sc.async = true; sc.onload = () => { const w = setInterval(() => { if (lib() && lib().render) { clearInterval(w); mount(); } }, 50); };
     document.head.appendChild(sc);
-    return { on: true, supabase: c.provider !== 'recaptcha', token: () => tok, reset() { tok = ''; try { id !== null && lib().reset(id); } catch {} } };
+    return {
+      on: true, supabase: c.provider !== 'recaptcha', token: () => tok, onChange(f) { onChange = f; },
+      reset() { tok = ''; if (own) { state = 'idle'; paint(); } try { id !== null && lib().reset(id); } catch {} onChange(); }
+    };
   })();
+  // The submit button stays grey and disabled until the CAPTCHA has succeeded.
+  let busyLogin = false;
+  const syncGo = () => { goBtn.disabled = busyLogin || (captcha.on && !captcha.token()); };
+  captcha.onChange(syncGo); syncGo();
   $('#auth-form').addEventListener('submit', async e => {
     e.preventDefault();
     const note = $('#auth-note'), email = $('#a-email').value.trim(), password = $('#a-pass').value;
     note.className = 'note';
     if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8) { note.textContent = 'Isi email yang valid dan kata sandi minimal 8 karakter.'; note.classList.add('err'); return; }
     const cap = captcha.token(); if (captcha.on && !cap) { note.textContent = 'Selesaikan verifikasi CAPTCHA terlebih dahulu.'; note.classList.add('err'); return; }
-    $('#auth-go').disabled = true;
+    busyLogin = true; syncGo();
     const { data, error } = signup ? await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.href.split('#')[0], captchaToken: captcha.supabase ? cap || undefined : undefined } }) : await sb.auth.signInWithPassword({ email, password, options: { captchaToken: captcha.supabase ? cap || undefined : undefined } });
-    captcha.reset();
-    $('#auth-go').disabled = false;
+    captcha.reset(); busyLogin = false; syncGo();
     if (error) { note.textContent = error.message === 'Invalid login credentials' ? 'Email atau kata sandi salah.' : error.message; note.classList.add('err'); return; }
     if (signup && !data.session) { note.textContent = 'Akun dibuat. Buka email Anda dan klik tautan konfirmasi, lalu masuk di sini.'; note.classList.add('ok'); return; }
     await afterLogin(data.user || data.session?.user);
