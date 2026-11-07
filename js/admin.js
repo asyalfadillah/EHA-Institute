@@ -116,10 +116,10 @@
     const own = c.provider === 'turnstile'; // Turnstile gets a manual "I'm not a robot" box: it only verifies after the visitor clicks it
     const api = { recaptcha: 'https://www.google.com/recaptcha/api.js?render=explicit', turnstile: 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit', hcaptcha: 'https://js.hcaptcha.com/1/api.js?render=explicit' }[c.provider];
     const lib = () => ({ recaptcha: window.grecaptcha, turnstile: window.turnstile, hcaptcha: window.hcaptcha })[c.provider];
-    let ui, txt, mountEl;
+    let ui, btn, txt, mountEl;
     const paint = () => {
       if (!ui) return;
-      ui.dataset.state = state; ui.setAttribute('aria-checked', state === 'ok' ? 'true' : 'false');
+      ui.dataset.state = state; btn.setAttribute('aria-checked', state === 'ok' ? 'true' : 'false');
       txt.textContent = { idle: 'Saya bukan robot', busy: 'Memverifikasi…', ok: 'Verifikasi berhasil', err: 'Gagal, klik untuk coba lagi' }[state];
     };
     const set = (st, t = '') => { state = st; tok = t; paint(); onChange(); };
@@ -132,11 +132,12 @@
     };
     box.hidden = false;
     if (own) {
-      ui = document.createElement('button'); ui.type = 'button'; ui.className = 'cap'; ui.setAttribute('role', 'checkbox'); ui.setAttribute('aria-checked', 'false');
-      ui.innerHTML = '<span class="cap__box" aria-hidden="true"></span><span class="cap__txt"></span><small class="cap__by">Cloudflare<br>Turnstile</small>';
-      txt = ui.querySelector('.cap__txt'); mountEl = document.createElement('div'); mountEl.className = 'cap__mount';
+      ui = document.createElement('div'); ui.className = 'cap';
+      ui.innerHTML = '<button type="button" class="cap__btn" role="checkbox" aria-checked="false"><span class="cap__box" aria-hidden="true"></span><span class="cap__txt"></span></button>'
+        + '<small class="cap__by">Dilindungi oleh <a href="https://www.cloudflare.com/" target="_blank" rel="noopener">Cloudflare</a><br><a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Privasi</a> · <a href="https://www.cloudflare.com/website-terms/" target="_blank" rel="noopener">Ketentuan</a></small>';
+      btn = ui.querySelector('.cap__btn'); txt = ui.querySelector('.cap__txt'); mountEl = document.createElement('div'); mountEl.className = 'cap__mount';
       box.append(ui, mountEl); paint();
-      ui.addEventListener('click', () => {
+      btn.addEventListener('click', () => {
         if (!ready || state === 'busy' || state === 'ok') return;
         set('busy'); try { lib().reset(id); lib().execute(id); } catch { set('err'); }
       });

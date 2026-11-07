@@ -133,3 +133,13 @@ a { color: inherit; }
 .cap[hidden] { display: none; }
 input:-webkit-autofill { animation: afIn 0.01s; }
 @keyframes afIn { from { opacity: 1; } to { opacity: 1; } }
+
+/* Turnstile box: wrapper + button + attribution links (links cannot live inside a button) */
+.cap { cursor: default; padding: 0 14px 0 0; }
+.cap__btn { flex: 1; align-self: stretch; display: flex; align-items: center; gap: 14px; padding: 0 0 0 14px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.cap__btn:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; border-radius: 6px; }
+.cap[data-state="busy"] .cap__btn { cursor: progress; }
+.cap[data-state="ok"] .cap__btn { cursor: default; }
+.cap__by a { color: #5b6661; text-decoration: none; }
+.cap__by a:hover { text-decoration: underline; }
+.cap { max-width: 330px; }
