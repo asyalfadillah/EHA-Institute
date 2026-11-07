@@ -11,6 +11,7 @@
 <meta property="og:description" content="Who EHA Institute is, what it believes in, and who it works with.">
 <meta property="og:image" content="assets/hero-poster.jpg">
 <link rel="preload" href="assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" as="image" href="assets/hero-poster.webp" imagesrcset="assets/hero-poster-768.webp 768w, assets/hero-poster.webp 1280w" imagesizes="100vw" fetchpriority="high">
 <link rel="stylesheet" href="css/style.css">
 <script>document.documentElement.classList.add('js')</script>
 </head>
@@ -30,7 +31,7 @@
     </a>
     <div class="nav-col">
       <div class="util">
-        <a href="news.html?cat=publication">Publications</a>
+        <a href="publications.html">Publications</a>
         <a href="about.html#partners">Collaborators</a>
       </div>
       <nav class="nav" id="nav" aria-label="Primary">
@@ -97,7 +98,7 @@
           </li>
         </ul>
         <div class="nav__mobile-util">
-          <a href="news.html?cat=publication">Publications</a>
+          <a href="publications.html">Publications</a>
           <a href="about.html#partners">Collaborators</a>
         </div>
       </nav>
@@ -107,7 +108,7 @@
 </header>
 <main id="main">
 <section class="hero hero--page " aria-label="Page title">
-  <img class="hero__poster" src="assets/hero-poster.jpg" alt="">
+  <img class="hero__poster" src="assets/hero-poster.webp" srcset="assets/hero-poster-768.webp 768w, assets/hero-poster.webp 1280w" sizes="100vw" alt="" fetchpriority="high" decoding="async">
   <div class="hero__scrim"></div>
   <div class="hero__inner wrap">
     <nav class="crumbs intro" aria-label="Breadcrumb"><a href="index.html">Home</a><span aria-hidden="true">/</span><span aria-current="page">About</span></nav>

@@ -22,8 +22,11 @@
     return root + 'assets/tile-01.jpg';
   };
   const hasPhoto = a => /^https:\/\//i.test(a.cover || '');
+  // Local tiles ship as WebP in two widths; uploaded images are already WebP/JPEG from the admin.
+  const SIZES = '(max-width: 700px) 92vw, (max-width: 1100px) 50vw, 33vw';
+  const imgTag = src => { const m = /^assets\/tile-(\d+)\.jpg$/.exec(src || ''); return m ? `<img src="assets/tile-${m[1]}.webp" srcset="assets/tile-${m[1]}-640.webp 640w, assets/tile-${m[1]}.webp 1400w" sizes="${SIZES}" alt="" loading="lazy" decoding="async">` : `<img src="${esc(src)}" alt="" loading="lazy" decoding="async">`; };
   const cover = (a, extra = '') => {
-    if (hasPhoto(a)) return `<figure class="media${extra}"><img src="${esc(a.cover)}" alt="" loading="lazy"></figure>`;
+    if (hasPhoto(a)) return `<figure class="media${extra}">${imgTag(a.cover)}</figure>`;
     const d = new Date((a.event_date || a.published_at) + 'T00:00:00');
     return `<figure class="media cover cover--${esc(a.category)}${extra}" aria-hidden="true"><span class="cover__in"><span class="cover__m">${MONTHS[d.getMonth()]} ${d.getFullYear()}</span><span class="cover__c">${esc(a.tag || CAT[a.category] || '')}</span></span></figure>`;
   };
@@ -37,14 +40,15 @@
   };
   async function load() {
     if (!cfg.url || !cfg.key) throw new Error('no config');
-    const [articles, team, partners, programs, settings] = await Promise.all([
+    const [articles, team, partners, programs, settings, publications] = await Promise.all([
       rest('articles', 'select=*&status=eq.published&order=published_at.desc,created_at.desc'),
       rest('team_members', 'select=*&published=eq.true&order=sort.asc,name.asc'),
       rest('partners', 'select=*&published=eq.true&order=sort.asc,name.asc'),
       rest('programs', 'select=*&published=eq.true&order=sort.asc,title.asc'),
-      rest('site_settings', 'select=key,value')
+      rest('site_settings', 'select=key,value'),
+      rest('publications', 'select=*&published=eq.true&order=year.desc,sort.asc,title.asc')
     ]);
-    return { articles, team, partners, programs, settings: Object.fromEntries(settings.map(s => [s.key, s.value])), live: true };
+    return { articles, team, partners, programs, publications, settings: Object.fromEntries(settings.map(s => [s.key, s.value])), live: true };
   }
 
   /* ---------- templates (same markup as the static build) ---------- */
@@ -170,16 +174,18 @@
 
     // article page
     if ($('#a-title')) renderArticle(arts);
+    if ($('#pub-list')) pubs(D.publications || []);
 
     // search index
     const pages = [['Page', 'Home', 'index.html'], ['Page', 'Main Research Areas', 'research-areas.html'], ['Page', 'Consultation Services', 'consultation-services.html'],
       ['Page', 'Our People', 'our-people.html'], ['Page', 'Our Team', 'our-people.html#team'], ['Page', 'Life at EHA', 'our-people.html#life'], ['Page', 'News', 'news.html'],
       ['Page', 'About EHA Institute', 'about.html'], ['Page', 'Mission & Values', 'about.html#values'], ['Page', 'Partners & Collaborators', 'about.html#partners'],
-      ['Page', 'Publications', 'news.html?cat=publication'], ['Page', 'Webinar Series', 'news.html?cat=event']];
+      ['Page', 'Publications', 'publications.html'], ['Page', 'Webinar Series', 'news.html?cat=event']];
     window.EHA_INDEX = pages
       .concat(D.team.map(m => ['People', m.name + ', ' + m.role, 'our-people.html#team']))
       .concat(D.programs.map(p => [p.kind === 'research' ? 'Research' : 'Service', p.title, p.kind === 'research' ? 'research-areas.html' : 'consultation-services.html']))
-      .concat(arts.map(a => [CAT[a.category], a.title, `article.html?s=${a.slug}`]));
+      .concat(arts.map(a => [CAT[a.category], a.title, `article.html?s=${a.slug}`]))
+      .concat((D.publications || []).map(x => ['Publication', x.title + (x.authors ? ' — ' + x.authors.split(';')[0].trim() + (x.authors.includes(';') ? ' et al.' : '') : ''), 'publications.html#pub-' + x.id]));
   }
 
   function renderArticle(arts) {
@@ -219,6 +225,66 @@
     if (D && D.live) live(D);
   })();
 
+
+  /* ---------- Publications page: list, filters, citations ---------- */
+  const KIND = { journal: 'Journal article', conference: 'Conference paper', report: 'Report', book: 'Book', other: 'Other' };
+  const PF = { q: '', kind: 'all', year: 'all', bound: false };
+  const authorList = a => (a || '').split(';').map(x => x.trim()).filter(Boolean);
+  const doiUrl = x => (x.doi ? 'https://doi.org/' + x.doi : '');
+  const linkOf = x => doiUrl(x) || (/^https:\/\//i.test(x.url || '') ? x.url : '');
+  const apa = x => {
+    const a = authorList(x.authors), who = a.length > 1 ? a.slice(0, -1).join(', ') + ', & ' + a[a.length - 1] : a[0] || '';
+    return `${who ? who + ' ' : ''}(${x.year}). ${x.title.replace(/[.?!]$/, '')}.${x.venue ? ' ' + x.venue + '.' : ''}${linkOf(x) ? ' ' + linkOf(x) : ''}`.replace(/\s+/g, ' ');
+  };
+  const bib = x => {
+    const type = { journal: 'article', conference: 'inproceedings', report: 'techreport', book: 'book', other: 'misc' }[x.kind] || 'misc';
+    const first = (authorList(x.authors)[0] || 'eha').split(',')[0].toLowerCase().replace(/[^a-z0-9]/g, '') || 'eha';
+    const key = first + x.year + (x.title.split(/\s+/).find(w => w.length > 3) || 'pub').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const f = [['title', x.title], ['author', authorList(x.authors).join(' and ')], ['year', x.year], [type === 'article' ? 'journal' : type === 'inproceedings' ? 'booktitle' : 'howpublished', x.venue], ['doi', x.doi], ['url', x.doi ? '' : /^https:\/\//i.test(x.url || '') ? x.url : '']].filter(r => r[1]);
+    return `@${type}{${key},\n` + f.map(r => `  ${r[0]} = {${String(r[1]).replace(/[{}]/g, '')}}`).join(',\n') + '\n}';
+  };
+  function pubs(list) {
+    const ul = $('#pub-list'); if (!ul) return;
+    const sel = $('#pub-year'), have = [...new Set(list.map(x => x.year))].sort((a, b) => b - a);
+    if (sel) { const cur = PF.year; sel.innerHTML = '<option value="all">All years</option>' + have.map(y => `<option value="${y}">${y}</option>`).join(''); sel.value = have.includes(+cur) ? cur : 'all'; PF.year = sel.value; }
+    const draw = () => {
+      const q = PF.q.trim().toLowerCase();
+      const shown = list.filter(x => (PF.kind === 'all' || x.kind === PF.kind) && (PF.year === 'all' || String(x.year) === PF.year) && (!q || [x.title, x.authors, x.venue, x.year, x.doi].join(' ').toLowerCase().includes(q)));
+      ul.innerHTML = shown.map((x, i) => {
+        const link = linkOf(x);
+        return `<li class="pub" id="pub-${esc(x.id)}" data-kind="${esc(x.kind)}">
+  <div class="pub__meta"><span class="pub__kind">${esc(KIND[x.kind] || 'Other')}</span><span>${esc(x.year)}</span>${x.venue ? `<span class="pub__venue">${esc(x.venue)}</span>` : ''}</div>
+  <h3 class="pub__title">${link ? `<a href="${esc(link)}" target="_blank" rel="noopener"><span class="link-line">${esc(x.title)}</span></a>` : esc(x.title)}</h3>
+  ${x.authors ? `<p class="pub__authors">${authorList(x.authors).map(esc).join('; ')}</p>` : ''}
+  ${x.abstract ? `<details class="pub__abs"><summary>Abstract</summary><p>${esc(x.abstract)}</p></details>` : ''}
+  <div class="pub__acts">
+    ${x.doi ? `<a class="pub__btn" href="${esc(doiUrl(x))}" target="_blank" rel="noopener">DOI</a>` : ''}
+    ${!x.doi && link ? `<a class="pub__btn" href="${esc(link)}" target="_blank" rel="noopener">Read</a>` : ''}
+    <button type="button" class="pub__btn" data-cite="apa" data-i="${list.indexOf(x)}">Cite APA</button>
+    <button type="button" class="pub__btn" data-cite="bib" data-i="${list.indexOf(x)}">BibTeX</button>
+  </div></li>`;
+      }).join('');
+      const c = $('#pub-count'); if (c) c.textContent = list.length ? `${shown.length} of ${list.length} publication${list.length === 1 ? '' : 's'}` : '';
+      const em = $('#pub-empty'); if (em) { em.hidden = shown.length > 0; em.textContent = list.length ? 'No publications match your search.' : 'Publications will be listed here soon.'; }
+      if (location.hash.startsWith('#pub-')) { const t = document.getElementById(location.hash.slice(1)); if (t) t.classList.add('is-hit'); }
+    };
+    pubs.draw = draw;
+    if (!PF.bound) {
+      PF.bound = true;
+      $('#pub-q').addEventListener('input', e => { PF.q = e.target.value; pubs.draw(); });
+      sel && sel.addEventListener('change', () => { PF.year = sel.value; pubs.draw(); });
+      $('#pub-kinds').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; PF.kind = b.dataset.kind; $$('#pub-kinds .chip').forEach(c => c.setAttribute('aria-pressed', String(c === b))); pubs.draw(); });
+      ul.addEventListener('click', async e => {
+        const b = e.target.closest('[data-cite]'); if (!b) return;
+        const x = pubs.list[+b.dataset.i]; if (!x) return;
+        const text = b.dataset.cite === 'bib' ? bib(x) : apa(x), old = b.dataset.l || b.textContent; b.dataset.l = old;
+        try { await navigator.clipboard.writeText(text); } catch { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch {} t.remove(); }
+        b.textContent = 'Copied \u2713'; clearTimeout(b._t); b._t = setTimeout(() => { b.textContent = old; }, 1600);
+      });
+    }
+    pubs.list = list; draw();
+  }
+
   /* ---------- live updates: Supabase Realtime (websocket) + a light poll as a safety net ---------- */
   function live(first) {
     let sig = JSON.stringify(first), busy = false, timer = 0;
@@ -232,7 +298,7 @@
     };
     const soon = () => { clearTimeout(timer); timer = setTimeout(refresh, 400); };
     // 1) Realtime: any insert / update / delete on the content tables
-    const tables = ['articles', 'team_members', 'partners', 'programs', 'site_settings'];
+    const tables = ['articles', 'team_members', 'partners', 'programs', 'site_settings', 'publications'];
     let ws, beat, tries = 0;
     const open = () => {
       try { ws = new WebSocket(`${cfg.url.replace(/^http/, 'ws')}/realtime/v1/websocket?apikey=${encodeURIComponent(cfg.key)}&vsn=1.0.0`); } catch { return; }

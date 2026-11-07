@@ -69,7 +69,21 @@
       search: m => m.name + ' ' + m.role,
       blank: () => ({ published: true, sort: 100, bio: '' }),
       fields: [F.text('name', 'Nama', { wide: true, required: true }), F.text('role', 'Jabatan', { required: true }), F.num('sort', 'Urutan', { help: 'Angka kecil tampil lebih dulu.' }),
-        F.img('photo', 'Foto', { ratio: '4:5', sizes: [[480, 600, 'Kecil'], [800, 1000, 'Standar'], [1200, 1500, 'Besar']], sizeDefault: 1, spec: 'Disarankan 800 × 1000 px (rasio 4:5).', help: 'Foto otomatis dipotong ke rasio 4:5 dan dikecilkan ke ukuran yang dipilih. JPG/PNG/WebP, asli maks. 15 MB. Kosongkan untuk memakai inisial.' }), F.area('bio', 'Bio singkat (opsional)', { rows: 3 }), F.bool('published', 'Tampilkan di situs')]
+        F.img('photo', 'Foto', { ratio: '4:5', sizes: [[480, 600, 'Kecil'], [800, 1000, 'Standar'], [1200, 1500, 'Besar']], sizeDefault: 1, spec: 'Disarankan 800 × 1000 px (rasio 4:5).', help: 'Foto otomatis dipotong ke rasio 4:5 dan dikecilkan ke ukuran yang dipilih. JPG/PNG/WebP, asli maks. 15 MB. Hasil disimpan sebagai WebP (jauh lebih kecil). Kosongkan untuk memakai inisial.' }), F.area('bio', 'Bio singkat (opsional)', { rows: 3 }), F.bool('published', 'Tampilkan di situs')]
+    },
+    publications: {
+      label: 'Publikasi', one: 'publikasi', table: 'publications', order: 'year.desc,sort.asc,title.asc',
+      hint: 'Artikel jurnal, makalah konferensi, laporan, dan buku. Tampil di halaman Publications (bisa dicari, difilter, dan disitasi).',
+      row: p => ({ t: p.title, m: `${{ journal: 'Jurnal', conference: 'Konferensi', report: 'Laporan', book: 'Buku', other: 'Lainnya' }[p.kind] || ''} · ${p.year}${p.venue ? ' · ' + p.venue : ''}${p.published ? '' : ' · disembunyikan'}`, ini: String(p.year).slice(2), badge: p.published ? '' : 'Draf' }),
+      search: p => [p.title, p.authors, p.venue, p.year, p.doi].join(' '),
+      blank: () => ({ kind: 'journal', year: new Date().getFullYear(), published: true, sort: 100, authors: '', venue: '', abstract: '' }),
+      fields: [F.text('title', 'Judul', { wide: true, required: true }),
+        F.text('authors', 'Penulis', { wide: true, help: 'Pisahkan penulis dengan titik koma. Contoh: Kusuma, F.; Santoso, L.; Rahma, D.' }),
+        F.num('year', 'Tahun', { required: true }), F.sel('kind', 'Jenis', [['journal', 'Artikel jurnal'], ['conference', 'Makalah konferensi'], ['report', 'Laporan'], ['book', 'Buku'], ['other', 'Lainnya']]),
+        F.text('venue', 'Jurnal / konferensi / penerbit', { wide: true }),
+        F.text('doi', 'DOI', { help: 'Hanya kodenya, tanpa https://doi.org/. Contoh: 10.1016/j.envint.2024.108123' }),
+        F.text('url', 'Tautan (jika tanpa DOI)', { help: 'Harus diawali https://' }),
+        F.area('abstract', 'Abstrak (opsional)'), F.num('sort', 'Urutan (dalam tahun yang sama)'), F.bool('published', 'Tampilkan di situs')]
     },
     partners: {
       label: 'Mitra', one: 'mitra', table: 'partners', order: 'sort.asc,name.asc',
@@ -287,7 +301,8 @@
     dlg.showModal(); $('#fields').scrollTop = 0;
   }
   // Resize (and crop to ratio when given) in the browser, then upload to the "media" bucket.
-  function fitImage(file, { w, h, max, fit, type = 'image/jpeg', q = 0.88 }) {
+  const WEBP = (() => { try { return document.createElement('canvas').toDataURL('image/webp').startsWith('data:image/webp'); } catch { return false; } })();
+  function fitImage(file, { w, h, max, fit, type = WEBP ? 'image/webp' : 'image/jpeg', q = 0.84 }) {
     return new Promise((ok, fail) => {
       const src = URL.createObjectURL(file), im = new Image();
       im.onload = () => {
@@ -302,7 +317,7 @@
         const c = document.createElement('canvas'); c.width = tw; c.height = th;
         const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
         if (fit === 'contain') { const k = Math.min(tw / sw, th / sh), dw = Math.round(sw * k), dh = Math.round(sh * k); g.drawImage(im, 0, 0, sw, sh, Math.round((tw - dw) / 2), Math.round((th - dh) / 2), dw, dh); }
-        else { if (type !== 'image/png') { g.fillStyle = '#fff'; g.fillRect(0, 0, tw, th); } g.drawImage(im, sx, sy, sw, sh, 0, 0, tw, th); }
+        else { g.fillStyle = '#fff'; g.fillRect(0, 0, tw, th); g.drawImage(im, sx, sy, sw, sh, 0, 0, tw, th); }
         c.toBlob(bl => bl ? ok({ blob: bl, w: tw, h: th, ow: im.naturalWidth, oh: im.naturalHeight }) : fail(new Error('Gagal memproses gambar')), type, q);
       };
       im.onerror = () => { URL.revokeObjectURL(src); fail(new Error('File bukan gambar yang valid')); };
@@ -324,15 +339,15 @@
       if (fl.size > 15 * 1024 * 1024) { toast('Ukuran file asli maksimal 15 MB.', true); return; }
       up.disabled = true; up.textContent = 'Memproses…';
       try {
-        let opt = { max: f.max || 1600 }; if (sizes) { const [w, hh] = sizes[+sel.value]; opt = { w, h: hh, fit: f.fit, type: f.png ? 'image/png' : 'image/jpeg' }; }
+        let opt = { max: f.max || 1600 }; if (sizes) { const [w, hh] = sizes[+sel.value]; opt = { w, h: hh, fit: f.fit, q: f.fit === 'contain' ? 0.92 : 0.84 }; }
         const gif = fl.type === 'image/gif'; let blob = fl, w0 = '', ext = fl.name.split('.').pop();
-        if (!gif) { const r = await fitImage(fl, opt); blob = r.blob; ext = opt.type === 'image/png' ? 'png' : 'jpg'; w0 = `${r.w} × ${r.h} px · ${kb(r.blob.size)} (asli ${r.ow} × ${r.oh} px, ${kb(fl.size)})`; }
+        if (!gif) { const r = await fitImage(fl, opt); blob = r.blob; ext = WEBP ? 'webp' : 'jpg'; w0 = `${r.w} × ${r.h} px · ${kb(r.blob.size)} (asli ${r.ow} × ${r.oh} px, ${kb(fl.size)})`; }
         else w0 = kb(fl.size);
         if (blob.size > 5 * 1024 * 1024) throw new Error('Hasil masih lebih dari 5 MB, pilih ukuran lebih kecil.');
         up.textContent = 'Mengunggah…';
         const base = fl.name.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40) || 'foto';
         const name = `${Date.now()}-${base}.${ext}`;
-        const { error } = await sb.storage.from('media').upload(name, blob, { cacheControl: '31536000', contentType: gif ? fl.type : blob.type || 'image/jpeg' });
+        const { error } = await sb.storage.from('media').upload(name, blob, { cacheControl: '31536000', contentType: gif ? fl.type : blob.type || 'image/webp' });
         if (error) throw error;
         url.value = sb.storage.from('media').getPublicUrl(name).data.publicUrl; paint(); info.textContent = 'Terunggah: ' + w0; toast('Gambar terunggah.');
       } catch (e) { toast('Gagal: ' + (e.message || e), true); }

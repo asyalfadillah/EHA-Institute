@@ -1226,3 +1226,31 @@ main > .section { border-radius: var(--r-sec) var(--r-sec) 0 0; margin-top: calc
 .partners-grid { grid-template-columns: repeat(auto-fill, minmax(clamp(272px, 22vw, 300px), 1fr)); align-items: start; }
 @media (max-width: 640px) { .partners-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); } }
 .partner { min-height: 0; }
+
+/* ---------- Publications page ---------- */
+.pubtools { display: flex; flex-wrap: wrap; gap: 12px; margin: clamp(22px, 2.4vw, 38px) 0 16px; }
+.pubsearch { position: relative; flex: 1 1 320px; display: block; }
+.pubsearch svg { position: absolute; left: 18px; top: 50%; width: 20px; height: 20px; translate: 0 -50%; opacity: 0.55; pointer-events: none; }
+.pubsearch input, .pubyear select { width: 100%; min-height: 52px; border-radius: 999px; border: 1.5px solid var(--card-line); background: #fff; color: var(--green-deep); font: inherit; font-size: 16px; padding: 0 20px; transition: border-color 0.2s, box-shadow 0.2s; }
+.pubsearch input { padding-left: 50px; }
+.pubyear select { appearance: none; padding-right: 44px; cursor: pointer; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8' fill='none' stroke='%230f3d2a' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M1 1l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 20px center; }
+.pubyear { flex: 0 0 auto; min-width: 170px; }
+.pubsearch input:focus, .pubyear select:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 4px rgba(43, 129, 86, 0.16); }
+.pubcount { margin: 0 0 18px; font-size: var(--fs-sm); opacity: 0.7; }
+.publist { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.pub { padding: clamp(20px, 2.2vw, 32px); border-radius: var(--r-lg); background: var(--card); border: 1px solid var(--card-line); transition: border-color 0.3s, background 0.3s, translate 0.5s var(--ease); scroll-margin-top: 110px; }
+@media (hover: hover) { .pub:hover { border-color: rgba(43, 129, 86, 0.45); translate: 0 -3px; } }
+.pub.is-hit { border-color: var(--green); box-shadow: 0 0 0 4px rgba(43, 129, 86, 0.16); }
+.pub__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 12.5px; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.85; }
+.pub__kind { background: var(--chip); border-radius: 999px; padding: 0.35em 1em; font-weight: 700; }
+.pub__venue { font-style: italic; text-transform: none; letter-spacing: 0; font-size: 14px; }
+.pub__title { margin: 14px 0 8px; font-size: clamp(19px, 1.7vw, 26px); line-height: 1.25; letter-spacing: -0.015em; text-wrap: balance; }
+.pub__authors { margin: 0; opacity: 0.78; font-size: var(--fs-sm); }
+.pub__abs { margin-top: 14px; }
+.pub__abs summary { cursor: pointer; font-weight: 600; font-size: 14px; width: fit-content; }
+.pub__abs p { margin: 10px 0 0; font-size: var(--fs-sm); line-height: 1.65; opacity: 0.85; max-width: 62em; }
+.pub__acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.pub__btn { display: inline-flex; align-items: center; min-height: 40px; padding: 0 1.2em; border-radius: 999px; border: 1.5px solid var(--card-line); background: transparent; color: inherit; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; text-decoration: none; transition: background 0.2s, color 0.2s, border-color 0.2s; }
+.pub__btn:hover { background: var(--green-deep); color: #fff; border-color: var(--green-deep); }
+.pubempty { padding: 36px 0; text-align: center; opacity: 0.7; }
+@media (max-width: 640px) { .pubyear { flex: 1 1 100%; } .pub { padding: 18px; border-radius: 22px; } }
