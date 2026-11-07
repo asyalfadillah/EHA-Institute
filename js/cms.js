@@ -85,7 +85,7 @@
 <div class="person__cap"><h3>${esc(m.name)}</h3><p>${esc(m.role)}</p>${m.bio ? `<p class="person__bio">${esc(m.bio)}</p>` : ''}</div></li>`;
 
   const logoOf = p => (/^https:\/\//i.test(p.logo || '') ? p.logo : '');
-  const partnerCard = (p, i) => `<li class="partner reveal" style="--d:${i * 0.06}s">${logoOf(p) ? `<img class="partner__logo" src="${esc(logoOf(p))}" alt="" width="212" height="30" loading="lazy">` : ''}<h3>${esc(p.name)}</h3><p>${esc(p.country)}</p></li>`;
+  const partnerCard = (p, i) => `<li class="partner reveal" style="--d:${i * 0.06}s">${logoOf(p) ? `<img class="partner__logo" src="${esc(logoOf(p))}" alt="${esc(p.name)}" width="212" height="300" loading="lazy">` : ''}<h3>${esc(p.name)}</h3><p>${esc(p.country)}</p></li>`;
 
   const stats = D => {
     const countries = new Set(D.partners.map(p => p.country).filter(Boolean)).size;
@@ -152,7 +152,7 @@
     $$('.stats').forEach(s => setHTML(s, stats(D)));
     const mq = $$('.marquee__track ul');
     if (mq.length && D.partners.length) {
-      const li = D.partners.map(p => `<li><a href="${root}about.html#partners"${logoOf(p) ? ' class="has-logo"' : ''}>${logoOf(p) ? `<img src="${esc(logoOf(p))}" alt="${esc(p.name)}" width="212" height="30" loading="lazy">` : esc(p.name)}</a></li>`).join('');
+      const li = D.partners.map(p => `<li><a href="${root}about.html#partners">${esc(p.name)}</a></li>`).join('');
       mq[0].innerHTML = li; if (mq[1]) mq[1].innerHTML = li.replace(/<a /g, '<a tabindex="-1" ');
     }
     const pg = $('.partners-grid'); if (pg && D.partners.length) setHTML(pg, D.partners.map(partnerCard).join(''));

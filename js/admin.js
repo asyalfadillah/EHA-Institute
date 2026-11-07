@@ -78,7 +78,7 @@
       search: p => p.name + ' ' + p.country,
       blank: () => ({ published: true, sort: 100 }),
       fields: [F.text('name', 'Nama institusi', { wide: true, required: true }), F.text('country', 'Negara'), F.num('sort', 'Urutan'),
-        F.img('logo', 'Logo mitra (opsional)', { ratio: '212:30', fit: 'contain', png: true, sizes: [[212, 30, 'Standar'], [424, 60, 'Tajam 2×']], sizeDefault: 0, spec: 'Ukuran logo 212 × 30 px (PNG transparan).', help: 'Logo otomatis dimuat utuh (tanpa terpotong) ke kanvas 212 × 30 px. Pilih "Tajam 2×" (424 × 60 px) agar tidak buram di layar retina. Lebih baik pakai logo horizontal dengan latar transparan.' }), F.text('url', 'Situs web (opsional)', { wide: true, help: 'Diawali https://' }), F.bool('published', 'Tampilkan di situs')]
+        F.img('logo', 'Logo mitra (opsional)', { ratio: '212:300', fit: 'contain', png: true, sizes: [[212, 300, 'Standar'], [424, 600, 'Tajam 2×']], sizeDefault: 0, spec: 'Ukuran logo 212 × 300 px (PNG transparan).', help: 'Logo otomatis dimuat utuh (tanpa terpotong) ke kanvas 212 × 30 px. Pilih "Tajam 2×" (424 × 60 px) agar tidak buram di layar retina. Pakai latar transparan atau putih. Nama instansi tampil di bawah logo.' }), F.text('url', 'Situs web (opsional)', { wide: true, help: 'Diawali https://' }), F.bool('published', 'Tampilkan di situs')]
     },
     programs: {
       label: 'Riset & Layanan', one: 'program', table: 'programs', order: 'kind.asc,sort.asc',
