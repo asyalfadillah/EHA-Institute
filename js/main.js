@@ -365,6 +365,7 @@
   if (h1 && !reduceMotion) {
     const text = h1.textContent.trim();
     h1.setAttribute('aria-label', text);
+    h1.dataset.plain = text;
     h1.innerHTML = text.split(/\s+/).map((w, i) => `<span class="w" aria-hidden="true"><span style="--i:${i}">${esc(w)}</span></span>`).join(' ');
     h1.classList.add('is-split');
   }

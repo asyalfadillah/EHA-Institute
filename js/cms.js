@@ -30,6 +30,19 @@
     const d = new Date((a.event_date || a.published_at) + 'T00:00:00');
     return `<figure class="media cover cover--${esc(a.category)}${extra}" aria-hidden="true"><span class="cover__in"><span class="cover__m">${MONTHS[d.getMonth()]} ${d.getFullYear()}</span><span class="cover__c">${esc(a.tag || CAT[a.category] || '')}</span></span></figure>`;
   };
+  const LANG = () => (window.EHA_LANG ? window.EHA_LANG() : 'en');
+  /* pick the Indonesian / English version of database content (falls back to what exists) */
+  const localize = D => {
+    const l = LANG();
+    const art = a => (a.lang !== l && a.title_alt) ? { ...a, title: a.title_alt, dek: a.dek_alt || a.dek, body: a.body_alt || a.body, lang: l } : a;
+    return {
+      ...D,
+      articles: D.articles.map(art),
+      team: D.team.map(m => l === 'id' ? { ...m, role: m.role_id || m.role, bio: m.bio_id || m.bio } : m),
+      programs: D.programs.map(p => l === 'id' ? { ...p, title: p.title_id || p.title, body: p.body_id || p.body } : p),
+      publications: (D.publications || []).map(x => l === 'id' && x.abstract_id ? { ...x, abstract: x.abstract_id } : x)
+    };
+  };
   const aurl = slug => `${root}article.html?s=${encodeURIComponent(slug)}`;
 
   /* ---------- data ---------- */
@@ -108,13 +121,16 @@
 
   /* ---------- page renderers ---------- */
   const setHTML = (el, html) => { if (el) el.innerHTML = html; };
-  function render(D, again) {
+  let LAST = null;
+  function render(raw, again) {
+    LAST = raw;
+    const D = localize(raw);
     const by = Object.fromEntries(D.articles.map(a => [a.slug, a]));
     const arts = D.articles;
 
     // site settings
     const S = D.settings || {};
-    $$('[data-set]').forEach(el => { const v = S[el.dataset.set]; if (!v) return; el.textContent = el.dataset.fmt === 'plus' ? '+' + v.replace(/\D/g, '') : v; });
+    $$('[data-set]').forEach(el => { const v = (LANG() === 'id' && S[el.dataset.set + '_id']) || S[el.dataset.set]; if (!v) return; el.textContent = el.dataset.fmt === 'plus' ? '+' + v.replace(/\D/g, '') : v; });
     $$('[data-set-href]').forEach(el => {
       const v = S[el.dataset.setHref]; if (!v) return;
       const h = (el.dataset.hrefPrefix || '') + (el.dataset.setHref === 'phone' ? v.replace(/[^\d+]/g, '') : v);
@@ -137,9 +153,20 @@
       if (b.length) { $$('[data-slide]', brief).forEach(n => n.remove()); ctr.insertAdjacentHTML('beforebegin', b.map(briefSlide).join('')); }
       else $('#news-brief')?.remove();
     }
+    if (brief && again) {   // carousel stays; refresh the text in place (language switch or edited story)
+      const b = arts.filter(a => a.in_brief), sl = $$('[data-slide]', brief);
+      if (b.length === sl.length) sl.forEach((el, i) => { const a = b[i], h = $('h3', el), pp = $('p', el); if (h) { h.textContent = a.title; h.lang = a.lang; } if (pp) { pp.textContent = a.dek; pp.lang = a.lang; } const bt = $('a.btn', el); if (bt) bt.href = aurl(a.slug); });
+    }
 
     // events
-    const eb = again ? null : $('#events-slides');
+    const ebAll = $('#events-slides');
+    if (ebAll && again) {
+      const ev = arts.filter(a => a.category === 'event' && a.event_date), today = new Date().toISOString().slice(0, 10);
+      const up = ev.filter(a => a.event_date >= today).sort((a, b) => a.event_date.localeCompare(b.event_date));
+      const shown = (up.length ? up : ev.sort((a, b) => b.event_date.localeCompare(a.event_date))).slice(0, 6), sl = $$('[data-slide]', ebAll);
+      if (shown.length === sl.length) sl.forEach((el, i) => { const a = shown[i], h = $('h3 a', el), pp = $('p', el); if (h) { h.textContent = short(a.title, 90); h.href = aurl(a.slug); } if (pp) pp.textContent = short(a.dek, 190); $$('h3, p', el).forEach(x => { x.lang = a.lang; }); });
+    }
+    const eb = again ? null : ebAll;
     if (eb) {
       const ev = arts.filter(a => a.category === 'event' && a.event_date);
       const today = new Date().toISOString().slice(0, 10);
@@ -195,7 +222,7 @@
     if (!a) {
       h1.textContent = 'Story not found';
       $('#a-body').innerHTML = '<p class="article__dek">This story may have been moved or unpublished. <a href="news.html">Browse all news</a>.</p>';
-      $('#more')?.remove(); document.title = 'Story not found | EHA Institute'; return;
+      $('#more')?.remove(); document.title = (window.EHA_T ? window.EHA_T('Story not found') : 'Story not found') + ' | EHA Institute'; document.body.dataset.dyntitle = '1'; return;
     }
     h1.textContent = a.title; h1.lang = a.lang;
     $('.crumbs [aria-current]').textContent = short(a.title, 48);
@@ -210,9 +237,11 @@
     const same = others.filter(x => x.category === a.category).slice(0, 3);
     const more = same.concat(others.filter(x => !same.includes(x))).slice(0, 3);
     $('#a-more').innerHTML = more.map((x, i) => card(x, i * 0.06)).join('');
-    document.title = `${short(a.title, 70)} | EHA Institute`;
+    document.title = `${short(a.title, 70)} | EHA Institute`; document.body.dataset.dyntitle = '1';
     $('meta[name="description"]')?.setAttribute('content', a.dek.slice(0, 200));
   }
+
+  document.addEventListener('eha:lang', () => { if (LAST) { try { render(LAST, true); $$('.reveal').forEach(el => el.classList.add('in')); } catch (e) { console.error('EHA lang', e); } } });
 
   window.EHA_READY = (async () => {
     let D;

@@ -1254,3 +1254,19 @@ main > .section { border-radius: var(--r-sec) var(--r-sec) 0 0; margin-top: calc
 .pub__btn:hover { background: var(--green-deep); color: #fff; border-color: var(--green-deep); }
 .pubempty { padding: 36px 0; text-align: center; opacity: 0.7; }
 @media (max-width: 640px) { .pubyear { flex: 1 1 100%; } .pub { padding: 18px; border-radius: 22px; } }
+
+/* ---------- language switcher (EN | ID) ---------- */
+.nav__item--lang { margin-left: 0; }
+.lang { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 999px; background: rgba(255, 255, 255, 0.08); }
+.lang__b { font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; line-height: 1; min-width: 34px; padding: 8px 9px; border-radius: 999px; color: inherit; opacity: 0.75; cursor: pointer; background: none; border: 0; transition: background-color 0.25s, opacity 0.25s, color 0.25s; }
+.lang__b:hover { opacity: 1; }
+.lang__b[aria-pressed="true"] { background: #fff; color: #0b2a1f; opacity: 1; }
+.lang__b:focus-visible { outline: 2px solid var(--lime, #cfe86a); outline-offset: 2px; }
+.site-header.is-light .lang { border-color: rgba(0, 0, 0, 0.2); background: rgba(0, 0, 0, 0.04); }
+.site-header.is-light .lang__b[aria-pressed="true"] { background: #0b2a1f; color: #fff; }
+@media (max-width: 899px) {
+  .nav__item--lang { order: -1; margin-bottom: 14px; }
+  .nav__item--lang .lang { width: 100%; padding: 4px; }
+  .nav__item--lang .lang__b { flex: 1; font-size: 14px; padding: 12px; }
+}
+@media (max-width: 899px) { html[lang="id"] .nav__item--search .icon-btn::after { content: "Cari"; } }

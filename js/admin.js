@@ -59,6 +59,9 @@
         F.img('cover', 'Gambar sampul', { ratio: '3:2', sizes: [[900, 600, 'Kecil'], [1500, 1000, 'Standar'], [2100, 1400, 'Besar']], sizeDefault: 1, spec: 'Disarankan 1500 × 1000 px (rasio 3:2).', help: 'Gambar otomatis dipotong ke rasio 3:2 dan dikecilkan. Asli maks. 15 MB.' }),
         F.area('dek', 'Ringkasan (1–2 kalimat)', { rows: 3 }),
         F.area('body', 'Isi artikel', { rows: 12, help: 'Pisahkan paragraf dengan baris kosong. "## Judul" untuk subjudul, "- " untuk daftar, **tebal**, [teks](https://tautan).' }),
+        F.text('title_alt', 'Terjemahan: Judul', { wide: true, help: 'Versi bahasa lainnya. Jika "Bahasa teks" = Indonesia, isi versi English (dan sebaliknya). Kosongkan jika tidak ada; pengunjung akan melihat teks aslinya.' }),
+        F.area('dek_alt', 'Terjemahan: Ringkasan', { rows: 3 }),
+        F.area('body_alt', 'Terjemahan: Isi artikel', { rows: 10, help: 'Format sama dengan isi artikel.' }),
         F.facts('facts', 'Detail (kotak samping)', { help: 'Pasangan label dan isi, mis. Tanggal / 18 Oktober 2025.' })
       ]
     },
@@ -68,7 +71,7 @@
       row: m => ({ t: m.name, m: m.role + (m.published ? '' : ' · disembunyikan'), img: m.photo, ini: m.name[0], badge: m.published ? '' : 'Draf' }),
       search: m => m.name + ' ' + m.role,
       blank: () => ({ published: true, sort: 100, bio: '' }),
-      fields: [F.text('name', 'Nama', { wide: true, required: true }), F.text('role', 'Jabatan', { required: true }), F.num('sort', 'Urutan', { help: 'Angka kecil tampil lebih dulu.' }),
+      fields: [F.text('name', 'Nama', { wide: true, required: true }), F.text('role', 'Jabatan (English)', { required: true }), F.text('role_id', 'Jabatan (Bahasa Indonesia)', { help: 'Opsional. Tampil saat pengunjung memilih ID.' }), F.num('sort', 'Urutan', { help: 'Angka kecil tampil lebih dulu.' }),
         F.img('photo', 'Foto', { ratio: '4:5', sizes: [[480, 600, 'Kecil'], [800, 1000, 'Standar'], [1200, 1500, 'Besar']], sizeDefault: 1, spec: 'Disarankan 800 × 1000 px (rasio 4:5).', help: 'Foto otomatis dipotong ke rasio 4:5 dan dikecilkan ke ukuran yang dipilih. JPG/PNG/WebP, asli maks. 15 MB. Hasil disimpan sebagai WebP (jauh lebih kecil). Kosongkan untuk memakai inisial.' }), F.area('bio', 'Bio singkat (opsional)', { rows: 3 }), F.bool('published', 'Tampilkan di situs')]
     },
     publications: {
@@ -83,7 +86,7 @@
         F.text('venue', 'Jurnal / konferensi / penerbit', { wide: true }),
         F.text('doi', 'DOI', { help: 'Hanya kodenya, tanpa https://doi.org/. Contoh: 10.1016/j.envint.2024.108123' }),
         F.text('url', 'Tautan (jika tanpa DOI)', { help: 'Harus diawali https://' }),
-        F.area('abstract', 'Abstrak (opsional)'), F.num('sort', 'Urutan (dalam tahun yang sama)'), F.bool('published', 'Tampilkan di situs')]
+        F.area('abstract', 'Abstrak (opsional)'), F.area('abstract_id', 'Abstrak (Bahasa Indonesia, opsional)'), F.num('sort', 'Urutan (dalam tahun yang sama)'), F.bool('published', 'Tampilkan di situs')]
     },
     partners: {
       label: 'Mitra', one: 'mitra', table: 'partners', order: 'sort.asc,name.asc',
@@ -101,7 +104,7 @@
       search: p => p.title,
       blank: () => ({ kind: 'research', published: true, sort: 100, related: [] }),
       fields: [F.text('title', 'Judul', { wide: true, required: true }), F.sel('kind', 'Ditampilkan di', [['research', 'Main Research Areas'], ['service', 'Consultation Services']]), F.num('sort', 'Urutan'),
-        F.area('body', 'Deskripsi', { rows: 4 }), F.rel('related', 'Artikel terkait', { help: 'Tautan "Related" di bawah deskripsi.' }), F.bool('published', 'Tampilkan di situs')]
+        F.text('title_id', 'Judul (Bahasa Indonesia)', { wide: true, help: 'Opsional. Judul di atas dianggap versi English.' }), F.area('body', 'Deskripsi', { rows: 4 }), F.area('body_id', 'Deskripsi (Bahasa Indonesia)', { rows: 4 }), F.rel('related', 'Artikel terkait', { help: 'Tautan "Related" di bawah deskripsi.' }), F.bool('published', 'Tampilkan di situs')]
     }
   };
   const TABS = [...Object.keys(ENT), 'settings', 'admins'];
