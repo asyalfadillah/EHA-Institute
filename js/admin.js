@@ -20,7 +20,7 @@
   const ap = (el, ...k) => el.append(...k.filter(Boolean));
   const today = () => new Date().toISOString().slice(0, 10);
 
-  if (!window.supabase || !cfg) { $('#boot').textContent = 'Tidak dapat memuat pustaka Supabase. Periksa koneksi internet.'; return; }
+  if (!window.supabase || !cfg) { $('#boot').textContent = 'Tidak dapat memuat pustaka Supabase. Pastikan file js/supabase.js ada di repo (folder js) dan sudah di-push, lalu muat ulang.'; return; }
   // Session lives in sessionStorage: closing the tab (or the browser) signs the admin out.
   const sessStore = (() => { try { sessionStorage.setItem('_t', '1'); sessionStorage.removeItem('_t'); return sessionStorage; } catch { return undefined; } })();
   try { Object.keys(localStorage).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => localStorage.removeItem(k)); } catch {} // drop sessions saved by older versions
