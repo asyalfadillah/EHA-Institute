@@ -55,5 +55,15 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/admineha",
+      "destination": "/admineha.html"
+    },
+    {
+      "source": "/admineha/",
+      "destination": "/admineha.html"
+    }
   ]
 }
