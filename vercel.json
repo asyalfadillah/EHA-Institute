@@ -56,5 +56,7 @@
       "source": "/admineha/",
       "destination": "/admineha.html"
     }
-  ]
+  ],
+  "cleanUrls": true,
+  "trailingSlash": false
 }
