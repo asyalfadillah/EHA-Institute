@@ -1278,3 +1278,55 @@ main > .section { border-radius: var(--r-sec) var(--r-sec) 0 0; margin-top: calc
   .lang { padding-left: 4px; margin-left: 2px; }
   .lang__b { min-width: 36px; padding: 0 9px; }
 }
+
+/* ---------- phones: tighter, shorter pages ---------- */
+@media (max-width: 640px) {
+  .section { padding-block: 34px; padding-bottom: calc(34px + var(--r-sec)); }
+  main > .section { padding-top: calc(34px + var(--r-sec) * 0.3); }
+  .label { margin-bottom: 18px; }
+
+  /* story cards become a compact row: thumbnail left, text right */
+  .card > a { display: grid; grid-template-columns: 104px minmax(0, 1fr); column-gap: 14px; align-items: start; }
+  .card .media { grid-row: 1 / span 4; grid-column: 1; aspect-ratio: 1 / 1; border-radius: 14px; align-self: start; }
+  .card .meta, .card h3, .card .card__ex { grid-column: 2; }
+  .card .meta { margin-top: 0; order: -1; grid-row: 1; }
+  .card h3 { grid-row: 2; margin-top: 6px; font-size: 16px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .card .card__ex { grid-row: 3; margin-top: 6px; font-size: 13px; -webkit-line-clamp: 2; }
+  .card .cover__c { display: none; }
+  .card .cover__m { font-size: 10px; left: 8px; top: 8px; letter-spacing: 0.08em; }
+  .latest__side, #life .newsgrid, #grid, #a-more { row-gap: 12px; }
+  .card, .newsgrid .card { padding: 10px; border-radius: 18px; }
+
+  /* lead story, brief and event slides */
+  .lead .media { aspect-ratio: 16 / 10; }
+  .lead p, .brief p { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .brief .media { aspect-ratio: 16 / 9; }
+  .brief .btn { margin-top: 16px; }
+  .event { row-gap: 14px; }
+  .event .media { aspect-ratio: 16 / 9; }
+  .event p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* featured tiles */
+  .tile { aspect-ratio: auto; height: 188px; }
+  .tile__body { bottom: 18px; }
+  .tile p { margin-top: 0.5em; }
+
+  /* values: letter on the left, text on the right */
+  .values { gap: 14px; }
+  .value { display: grid; grid-template-columns: 52px minmax(0, 1fr); column-gap: 14px; align-items: start; padding-top: 12px; }
+  .value__l { font-size: 46px; grid-row: 1 / span 2; }
+  .value h3 { margin-top: 0; }
+  .value p { margin-top: 4px; }
+
+  /* research / service rows and partners */
+  .row { padding: 18px; }
+  .row__b p { font-size: 14.5px; }
+  .stats { margin-top: 26px; }
+  .stat { padding: 14px; }
+  .partner { padding: 12px; }
+}
+@media (max-width: 640px) {
+  .lead h3 { font-size: 21px; line-height: 1.15; }
+  .row__links li:nth-child(n+3) { display: none; }
+  .row__rel { margin-top: 14px; }
+}
